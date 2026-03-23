@@ -50,15 +50,15 @@ const saveLocal = <T>(key: string, data: T[]) => {
 // --- Data Service ---
 export const dataService = {
   // Products
-  getProducts: (callback: (products: Product[]) => void) => {
+  getProducts: (tenantId: string, callback: (products: Product[]) => void) => {
     if (useFirebase) {
-      const q = query(collection(db, 'products'), orderBy('name'));
+      const q = query(collection(db, 'products'), where('tenantId', '==', tenantId), orderBy('name'));
       return onSnapshot(q, (snapshot) => {
         const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
         callback(products);
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'products'));
     } else {
-      const products = getLocal<Product>(STORAGE_KEYS.PRODUCTS);
+      const products = getLocal<Product>(STORAGE_KEYS.PRODUCTS).filter(p => p.tenantId === tenantId);
       callback(products);
       return () => {}; // No-op for local
     }
@@ -115,15 +115,15 @@ export const dataService = {
   },
 
   // Transactions
-  getTransactions: (callback: (transactions: Transaction[]) => void) => {
+  getTransactions: (tenantId: string, callback: (transactions: Transaction[]) => void) => {
     if (useFirebase) {
-      const q = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(50));
+      const q = query(collection(db, 'transactions'), where('tenantId', '==', tenantId), orderBy('createdAt', 'desc'), limit(50));
       return onSnapshot(q, (snapshot) => {
         const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         callback(transactions);
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'transactions'));
     } else {
-      const transactions = getLocal<Transaction>(STORAGE_KEYS.TRANSACTIONS);
+      const transactions = getLocal<Transaction>(STORAGE_KEYS.TRANSACTIONS).filter(t => t.tenantId === tenantId);
       callback(transactions.sort((a, b) => (b.createdAt as any) - (a.createdAt as any)));
       return () => {};
     }

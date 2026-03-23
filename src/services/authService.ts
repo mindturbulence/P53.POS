@@ -41,6 +41,7 @@ export const authService = {
           displayName: firebaseUser.displayName || '',
           photoURL: firebaseUser.photoURL || '',
           role: 'staff',
+          tenantId: firebaseUser.uid, // Default tenantId for Google login
           createdAt: new Date() as any
         });
       } else {
@@ -64,25 +65,27 @@ export const authService = {
     }
   },
 
-  loginLocal: async (username: string, password: string): Promise<UserProfile> => {
+  loginLocal: async (username: string, password: string, tenantId: string): Promise<UserProfile> => {
     // Simple local auth for demo/offline mode
     // In a real app, this would call a backend
     if (username === 'admin' && password === 'admin') {
       const user: UserProfile = {
-        uid: 'local-admin',
-        email: 'admin@local.pos',
+        uid: `local-${tenantId}-admin`,
+        email: `admin@${tenantId}.pos`,
         displayName: 'Local Admin',
         role: 'admin',
+        tenantId: tenantId,
         createdAt: new Date() as any
       };
       saveLocalUser(user);
       return user;
     } else if (username === 'staff' && password === 'staff') {
       const user: UserProfile = {
-        uid: 'local-staff',
-        email: 'staff@local.pos',
+        uid: `local-${tenantId}-staff`,
+        email: `staff@${tenantId}.pos`,
         displayName: 'Local Staff',
         role: 'staff',
+        tenantId: tenantId,
         createdAt: new Date() as any
       };
       saveLocalUser(user);

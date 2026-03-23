@@ -47,6 +47,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function getTenantId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId;
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -60,6 +64,10 @@ service cloud.firestore {
     function isStaff() {
       return isAuthenticated() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff' || isAdmin());
+    }
+
+    function isSameTenant(data) {
+      return isAuthenticated() && data.tenantId == getTenantId();
     }
 
     function isValidEmail(email) {
@@ -83,33 +91,36 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return hasRequiredFields(['uid', 'email', 'role', 'createdAt']) &&
-        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
+      return hasRequiredFields(['uid', 'email', 'role', 'tenantId', 'createdAt']) &&
+        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'tenantId', 'createdAt']) &&
         data.uid == request.auth.uid &&
         isValidEmail(data.email) &&
         data.role in ['admin', 'staff'] &&
+        data.tenantId is string && data.tenantId.size() > 0 &&
         data.createdAt is timestamp;
     }
 
     function isValidProduct(data) {
-      return hasRequiredFields(['name', 'price', 'stock', 'createdBy', 'updatedAt']) &&
-        hasOnlyAllowedFields(['name', 'price', 'stock', 'category', 'imageUrl', 'createdBy', 'updatedAt']) &&
+      return hasRequiredFields(['name', 'price', 'stock', 'tenantId', 'createdBy', 'updatedAt']) &&
+        hasOnlyAllowedFields(['name', 'price', 'stock', 'category', 'imageUrl', 'tenantId', 'createdBy', 'updatedAt']) &&
         data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
         data.price is number && data.price > 0 &&
         data.stock is int && data.stock >= 0 &&
         (!('category' in data) || (data.category is string && data.category.size() < 50)) &&
         (!('imageUrl' in data) || isValidUrl(data.imageUrl)) &&
+        data.tenantId is string && data.tenantId.size() > 0 &&
         data.createdBy == request.auth.uid &&
         data.updatedAt is timestamp;
     }
 
     function isValidTransaction(data) {
-      return hasRequiredFields(['items', 'totalAmount', 'paymentMethod', 'status', 'createdBy', 'createdAt']) &&
-        hasOnlyAllowedFields(['items', 'totalAmount', 'paymentMethod', 'status', 'createdBy', 'createdAt']) &&
+      return hasRequiredFields(['items', 'totalAmount', 'paymentMethod', 'status', 'tenantId', 'createdBy', 'createdAt']) &&
+        hasOnlyAllowedFields(['items', 'totalAmount', 'paymentMethod', 'status', 'tenantId', 'createdBy', 'createdAt']) &&
         data.items is list && data.items.size() > 0 && data.items.size() < 50 &&
         data.totalAmount is number && data.totalAmount > 0 &&
         data.paymentMethod in ['cash', 'qris'] &&
         data.status in ['completed', 'pending', 'cancelled'] &&
+        data.tenantId is string && data.tenantId.size() > 0 &&
         data.createdBy == request.auth.uid &&
         data.createdAt is timestamp;
     }
@@ -125,16 +136,16 @@ service cloud.firestore {
     }
 
     match /products/{productId} {
-      allow read: if isStaff();
-      allow create: if isAdmin() && isValidProduct(request.resource.data);
-      allow update: if isAdmin() && isValidProduct(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isStaff() && isSameTenant(resource.data);
+      allow create: if isAdmin() && isValidProduct(request.resource.data) && isSameTenant(request.resource.data);
+      allow update: if isAdmin() && isValidProduct(request.resource.data) && isSameTenant(request.resource.data) && isSameTenant(resource.data);
+      allow delete: if isAdmin() && isSameTenant(resource.data);
     }
 
     match /transactions/{transactionId} {
-      allow read: if isStaff();
-      allow create: if isStaff() && isValidTransaction(request.resource.data);
-      allow update: if isAdmin() && isValidTransaction(request.resource.data);
+      allow read: if isStaff() && isSameTenant(resource.data);
+      allow create: if isStaff() && isValidTransaction(request.resource.data) && isSameTenant(request.resource.data);
+      allow update: if isAdmin() && isValidTransaction(request.resource.data) && isSameTenant(request.resource.data) && isSameTenant(resource.data);
     }
     
     // Default deny

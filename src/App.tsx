@@ -74,6 +74,7 @@ const LoadingScreen = () => (
 const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) => void }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [tenantId, setTenantId] = useState('default');
   const [error, setError] = useState('');
   const [isLocal, setIsLocal] = useState(false);
 
@@ -81,7 +82,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
     e.preventDefault();
     setError('');
     try {
-      const user = await authService.loginLocal(username, password);
+      const user = await authService.loginLocal(username, password, tenantId);
       onLoginSuccess(user);
     } catch (err: any) {
       setError(err.message);
@@ -127,6 +128,17 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
                 {error}
               </div>
             )}
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Store ID (Tenant ID)</label>
+              <input
+                type="text"
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                placeholder="e.g. my-store"
+                required
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Username</label>
               <input
@@ -227,8 +239,8 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribeProducts = dataService.getProducts(setProducts);
-    const unsubscribeTransactions = dataService.getTransactions(setTransactions);
+    const unsubscribeProducts = dataService.getProducts(user.tenantId, setProducts);
+    const unsubscribeTransactions = dataService.getTransactions(user.tenantId, setTransactions);
 
     return () => {
       unsubscribeProducts();
@@ -327,6 +339,7 @@ export default function App() {
         totalAmount: cartTotal,
         paymentMethod,
         status: 'completed',
+        tenantId: user.tenantId,
         createdBy: user.uid,
         createdAt: Timestamp.now()
       };
@@ -365,6 +378,7 @@ export default function App() {
       stock: Number(formData.get('stock')),
       category: formData.get('category') as string,
       imageUrl: formData.get('imageUrl') as string || `https://picsum.photos/seed/${formData.get('name')}/200/200`,
+      tenantId: user.tenantId,
       updatedAt: Timestamp.now(),
       createdBy: user.uid
     };
@@ -750,10 +764,10 @@ export default function App() {
                       <button
                         onClick={async () => {
                           const initialProducts = [
-                            { name: 'Espresso', price: 25000, stock: 100, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/espresso/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
-                            { name: 'Latte', price: 35000, stock: 80, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/latte/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
-                            { name: 'Croissant', price: 20000, stock: 30, category: 'Pastry', imageUrl: 'https://picsum.photos/seed/croissant/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
-                            { name: 'Iced Tea', price: 15000, stock: 200, category: 'Tea', imageUrl: 'https://picsum.photos/seed/icedtea/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Espresso', price: 25000, stock: 100, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/espresso/200/200', tenantId: user.tenantId, createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Latte', price: 35000, stock: 80, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/latte/200/200', tenantId: user.tenantId, createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Croissant', price: 20000, stock: 30, category: 'Pastry', imageUrl: 'https://picsum.photos/seed/croissant/200/200', tenantId: user.tenantId, createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Iced Tea', price: 15000, stock: 200, category: 'Tea', imageUrl: 'https://picsum.photos/seed/icedtea/200/200', tenantId: user.tenantId, createdBy: user.uid, updatedAt: Timestamp.now() },
                           ];
                           for (const p of initialProducts) {
                             await dataService.addProduct(p);

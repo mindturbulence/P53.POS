@@ -6,6 +6,7 @@ export interface UserProfile {
   displayName?: string;
   photoURL?: string;
   role: 'admin' | 'staff';
+  tenantId: string;
   createdAt: Timestamp;
 }
 
@@ -16,6 +17,7 @@ export interface Product {
   stock: number;
   category?: string;
   imageUrl?: string;
+  tenantId: string;
   createdBy: string;
   updatedAt: Timestamp;
 }
@@ -38,6 +40,7 @@ export interface Transaction {
   totalAmount: number;
   paymentMethod: 'cash' | 'qris';
   status: 'completed' | 'pending' | 'cancelled';
+  tenantId: string;
   createdBy: string;
   createdAt: Timestamp;
 }

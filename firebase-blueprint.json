@@ -10,9 +10,10 @@
         "displayName": { "type": "string", "description": "User's display name." },
         "photoURL": { "type": "string", "format": "uri", "description": "User's profile photo URL." },
         "role": { "type": "string", "enum": ["admin", "staff"], "description": "User's role in the system." },
+        "tenantId": { "type": "string", "description": "Identifier for the tenant/store." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the user was created." }
       },
-      "required": ["uid", "email", "role", "createdAt"]
+      "required": ["uid", "email", "role", "tenantId", "createdAt"]
     },
     "Product": {
       "title": "Product",
@@ -25,10 +26,11 @@
         "stock": { "type": "integer", "description": "Current stock level." },
         "category": { "type": "string", "description": "Product category." },
         "imageUrl": { "type": "string", "format": "uri", "description": "URL to the product image." },
+        "tenantId": { "type": "string", "description": "Identifier for the tenant/store." },
         "createdBy": { "type": "string", "description": "UID of the user who created the product." },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last update." }
       },
-      "required": ["name", "price", "stock", "createdBy", "updatedAt"]
+      "required": ["name", "price", "stock", "tenantId", "createdBy", "updatedAt"]
     },
     "Transaction": {
       "title": "Transaction",
@@ -52,10 +54,11 @@
         "totalAmount": { "type": "number", "description": "Total amount of the transaction." },
         "paymentMethod": { "type": "string", "enum": ["cash", "qris"], "description": "Method of payment." },
         "status": { "type": "string", "enum": ["completed", "pending", "cancelled"], "description": "Status of the transaction." },
+        "tenantId": { "type": "string", "description": "Identifier for the tenant/store." },
         "createdBy": { "type": "string", "description": "UID of the user who performed the transaction." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of the transaction." }
       },
-      "required": ["items", "totalAmount", "paymentMethod", "status", "createdBy", "createdAt"]
+      "required": ["items", "totalAmount", "paymentMethod", "status", "tenantId", "createdBy", "createdAt"]
     }
   },
   "firestore": {
