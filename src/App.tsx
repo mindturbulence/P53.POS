@@ -18,11 +18,11 @@ import {
   query, 
   orderBy, 
   addDoc, 
-  Timestamp, 
   updateDoc, 
   deleteDoc, 
   limit, 
-  where 
+  where,
+  Timestamp
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -50,6 +50,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { authService } from './services/authService';
+import { dataService, useFirebase } from './services/dataService';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UserProfile, Product, CartItem, Transaction, TransactionItem } from './types';
 
@@ -65,28 +67,115 @@ const LoadingScreen = () => (
       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
       className="w-12 h-12 border-4 border-stone-200 border-t-stone-900 rounded-full mb-4"
     />
-    <p className="text-stone-500 font-medium">Loading POST. POS...</p>
+    <p className="text-stone-500 font-medium">Loading P53. POS...</p>
   </div>
 );
 
-const LoginScreen = () => (
-  <div className="min-h-screen flex items-center justify-center bg-stone-50 p-4">
-    <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-stone-100 text-center">
-      <div className="w-16 h-16 bg-stone-900 rounded-2xl flex items-center justify-center mx-auto mb-6">
-        <ShoppingCart className="text-white w-8 h-8" />
+const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) => void }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLocal, setIsLocal] = useState(false);
+
+  const handleLocalLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const user = await authService.loginLocal(username, password);
+      onLoginSuccess(user);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-stone-50 p-4">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-stone-100">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-stone-900 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <ShoppingCart className="text-white w-8 h-8" />
+          </div>
+          <h1 className="text-3xl font-bold text-stone-900 mb-2">P53. POS</h1>
+          <p className="text-stone-500">Simple, lightweight, and powerful Point of Sale for your business.</p>
+        </div>
+
+        {!isLocal ? (
+          <div className="space-y-4">
+            <button
+              onClick={() => authService.loginWithGoogle()}
+              className="w-full flex items-center justify-center gap-3 bg-white border border-stone-200 text-stone-700 py-3 rounded-xl font-medium hover:bg-stone-50 transition-all shadow-sm"
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" referrerPolicy="no-referrer" />
+              Continue with Google
+            </button>
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-stone-100"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-stone-400">Or</span></div>
+            </div>
+            <button
+              onClick={() => setIsLocal(true)}
+              className="w-full py-3 text-stone-500 hover:text-stone-900 font-medium transition-all"
+            >
+              Use Local Account
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleLocalLogin} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm flex items-center gap-2">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                placeholder="admin or staff"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                placeholder="admin or staff"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 transition-all shadow-md"
+            >
+              Login
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsLocal(false)}
+              className="w-full py-2 text-stone-400 hover:text-stone-600 text-sm font-medium transition-all"
+            >
+              Back to Google Login
+            </button>
+          </form>
+        )}
+        
+        {!useFirebase && (
+          <div className="mt-8 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+            <p className="text-xs text-amber-700 text-center">
+              <strong>Offline Mode:</strong> Firebase is not configured. Data will be saved locally in your browser.
+            </p>
+          </div>
+        )}
       </div>
-      <h1 className="text-3xl font-bold text-stone-900 mb-2">POST. POS</h1>
-      <p className="text-stone-500 mb-8">Simple, lightweight, and powerful Point of Sale for your business.</p>
-      <button
-        onClick={() => signInWithPopup(auth, googleProvider)}
-        className="w-full flex items-center justify-center gap-3 bg-white border border-stone-200 text-stone-700 py-3 rounded-xl font-medium hover:bg-stone-50 transition-all shadow-sm"
-      >
-        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" referrerPolicy="no-referrer" />
-        Continue with Google
-      </button>
     </div>
-  </div>
-);
+  );
+};
 
 // --- Main App Component ---
 
@@ -107,33 +196,30 @@ export default function App() {
   // --- Auth & Data Fetching ---
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        try {
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            setUser(userDoc.data() as UserProfile);
-          } else {
-            // Create new user profile
-            const newUser: UserProfile = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || '',
-              photoURL: firebaseUser.photoURL || '',
-              role: 'staff', // Default role
-              createdAt: Timestamp.now(),
-            };
-            await setDoc(userDocRef, newUser);
-            setUser(newUser);
-          }
-        } catch (error) {
-          handleFirestoreError(error, OperationType.GET, 'users');
+    const unsubscribe = authService.onAuthStateChange(async (user) => {
+      if (user && user.uid.startsWith('local-')) {
+        setUser(user);
+        setLoading(false);
+      } else if (user) {
+        // Firebase user detected, fetch full profile
+        const profile = await dataService.getCurrentUser(user.uid);
+        if (profile) {
+          setUser(profile);
+        } else {
+          // Create new user profile in Firebase
+          const newUser: UserProfile = {
+            ...user,
+            role: 'staff',
+            createdAt: Timestamp.now(),
+          };
+          await dataService.saveUser(newUser);
+          setUser(newUser);
         }
+        setLoading(false);
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -141,17 +227,8 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    const productsQuery = query(collection(db, 'products'), orderBy('name'));
-    const unsubscribeProducts = onSnapshot(productsQuery, (snapshot) => {
-      const productList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-      setProducts(productList);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'products'));
-
-    const transactionsQuery = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(50));
-    const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-      const transactionList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      setTransactions(transactionList);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'transactions'));
+    const unsubscribeProducts = dataService.getProducts(setProducts);
+    const unsubscribeTransactions = dataService.getTransactions(setTransactions);
 
     return () => {
       unsubscribeProducts();
@@ -255,14 +332,12 @@ export default function App() {
       };
 
       // Add transaction
-      await addDoc(collection(db, 'transactions'), newTransaction);
+      await dataService.addTransaction(newTransaction);
 
       // Update stock
       for (const item of cart) {
-        const productRef = doc(db, 'products', item.id);
-        await updateDoc(productRef, {
-          stock: item.stock - item.quantity,
-          updatedAt: Timestamp.now()
+        await dataService.updateProduct(item.id, {
+          stock: item.stock - item.quantity
         });
       }
 
@@ -296,22 +371,22 @@ export default function App() {
 
     try {
       if (showProductModal.product) {
-        await updateDoc(doc(db, 'products', showProductModal.product.id), productData);
+        await dataService.updateProduct(showProductModal.product.id, productData);
       } else {
-        await addDoc(collection(db, 'products'), productData);
+        await dataService.addProduct(productData);
       }
       setShowProductModal({ show: false });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'products');
+      console.error('Save product error:', error);
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
-      await deleteDoc(doc(db, 'products', id));
+      await dataService.deleteProduct(id);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, 'products');
+      console.error('Delete product error:', error);
     }
   };
 
@@ -322,7 +397,7 @@ export default function App() {
   };
 
   if (loading) return <LoadingScreen />;
-  if (!user) return <LoginScreen />;
+  if (!user) return <LoginScreen onLoginSuccess={setUser} />;
 
   return (
     <ErrorBoundary>
@@ -338,7 +413,7 @@ export default function App() {
               <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center">
                 <ShoppingCart className="text-white w-5 h-5" />
               </div>
-              <span className="text-xl font-bold tracking-tight">POST. POS</span>
+              <span className="text-xl font-bold tracking-tight">P53. POS</span>
             </div>
 
             <nav className="flex-1 space-y-2">
@@ -383,7 +458,7 @@ export default function App() {
                 </div>
               </div>
               <button
-                onClick={() => signOut(auth)}
+                onClick={() => authService.logout()}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium"
               >
                 <LogOut size={20} />
@@ -397,7 +472,10 @@ export default function App() {
         <header className="md:hidden bg-white border-b border-stone-200 p-4 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-2">
             <ShoppingCart className="text-stone-900 w-6 h-6" />
-            <span className="text-lg font-bold">POST.</span>
+            <span className="text-lg font-bold">P53.</span>
+            {!useFirebase && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Offline</span>
+            )}
           </div>
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-stone-100 rounded-lg">
             <Menu size={24} />
@@ -421,7 +499,12 @@ export default function App() {
                   {/* Product Grid */}
                   <div className="flex-1 flex flex-col gap-6">
                     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                      <h2 className="text-2xl font-bold">Menu</h2>
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-bold">Menu</h2>
+                        {!useFirebase && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">Offline</span>
+                        )}
+                      </div>
                       <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
                         <input
@@ -543,7 +626,12 @@ export default function App() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">Inventory Management</h2>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-bold">Inventory Management</h2>
+                      {!useFirebase && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">Offline Mode</span>
+                      )}
+                    </div>
                     {user.role === 'admin' && (
                       <button
                         onClick={() => setShowProductModal({ show: true })}
@@ -662,13 +750,13 @@ export default function App() {
                       <button
                         onClick={async () => {
                           const initialProducts = [
-                            { name: 'Espresso', price: 25000, stock: 100, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/espresso/200/200' },
-                            { name: 'Latte', price: 35000, stock: 80, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/latte/200/200' },
-                            { name: 'Croissant', price: 20000, stock: 30, category: 'Pastry', imageUrl: 'https://picsum.photos/seed/croissant/200/200' },
-                            { name: 'Iced Tea', price: 15000, stock: 200, category: 'Tea', imageUrl: 'https://picsum.photos/seed/icedtea/200/200' },
+                            { name: 'Espresso', price: 25000, stock: 100, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/espresso/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Latte', price: 35000, stock: 80, category: 'Coffee', imageUrl: 'https://picsum.photos/seed/latte/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Croissant', price: 20000, stock: 30, category: 'Pastry', imageUrl: 'https://picsum.photos/seed/croissant/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
+                            { name: 'Iced Tea', price: 15000, stock: 200, category: 'Tea', imageUrl: 'https://picsum.photos/seed/icedtea/200/200', createdBy: user.uid, updatedAt: Timestamp.now() },
                           ];
                           for (const p of initialProducts) {
-                            await addDoc(collection(db, 'products'), { ...p, createdBy: user.uid, updatedAt: Timestamp.now() });
+                            await dataService.addProduct(p);
                           }
                         }}
                         className="text-xs bg-stone-100 text-stone-600 px-3 py-1 rounded-full hover:bg-stone-200"
