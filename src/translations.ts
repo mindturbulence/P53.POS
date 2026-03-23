@@ -1,0 +1,204 @@
+export type Language = 'en' | 'id';
+
+export const translations = {
+  en: {
+    appName: 'P53. POS',
+    appDescription: 'Simple, lightweight, and powerful Point of Sale for your business.',
+    loading: 'Loading P53. POS...',
+    login: {
+      title: 'Login',
+      googleLogin: 'Login with Google',
+      localLogin: 'Local Login (Offline Mode)',
+      username: 'Username',
+      password: 'Password',
+      storeId: 'Store ID (Tenant ID)',
+      loginButton: 'Login',
+      backToGoogle: 'Back to Google Login',
+      error: 'Invalid credentials. Use admin/admin or staff/staff.'
+    },
+    sidebar: {
+      pos: 'POS',
+      inventory: 'Inventory',
+      history: 'History',
+      dashboard: 'Dashboard',
+      logout: 'Logout',
+      language: 'Language'
+    },
+    pos: {
+      searchPlaceholder: 'Search products...',
+      allCategories: 'All Categories',
+      cart: 'Cart',
+      cartTitle: 'Current Order',
+      emptyCart: 'Your cart is empty',
+      subtotal: 'Subtotal',
+      tax: 'Tax (0%)',
+      total: 'Total',
+      checkout: 'Checkout',
+      clear: 'Clear',
+      soldOut: 'Sold Out'
+    },
+    common: {
+      offlineMode: 'Offline Mode',
+      actions: 'Actions',
+      save: 'Save',
+      cancel: 'Cancel',
+      tryAgain: 'Try Again',
+      admin: 'Admin',
+      staff: 'Staff'
+    },
+    inventory: {
+      title: 'Inventory Management',
+      addProduct: 'Add Product',
+      editProduct: 'Edit Product',
+      name: 'Product Name',
+      price: 'Price',
+      stock: 'Stock',
+      category: 'Category',
+      imageUrl: 'Image URL (Optional)',
+      save: 'Save Product',
+      cancel: 'Cancel',
+      deleteConfirm: 'Are you sure you want to delete this product?',
+      noProducts: 'No products found. Add some to get started!'
+    },
+    history: {
+      title: 'Transaction History',
+      noTransactions: 'No transactions found.',
+      id: 'Transaction ID',
+      date: 'Date',
+      items: 'Items',
+      amount: 'Amount',
+      method: 'Method',
+      status: 'Status'
+    },
+    dashboard: {
+      title: 'Business Overview',
+      totalSales: 'Total Sales',
+      totalTransactions: 'Total Transactions',
+      totalProducts: 'Total Products',
+      totalRevenue: 'Total Revenue',
+      recentSales: 'Recent Sales',
+      recentActivity: 'Recent Activity',
+      salesTrend: 'Sales Trend (Last 7 Days)',
+      fromLastMonth: 'from last month',
+      acrossBranches: 'Across all branches',
+      topProducts: 'Top Products',
+      inStock: 'in stock',
+      newOrderOf: 'New order of',
+      completed: 'completed'
+    },
+    checkout: {
+      title: 'Payment',
+      paymentMethod: 'Select Payment Method',
+      cash: 'Cash',
+      qris: 'QRIS',
+      confirmPayment: 'Confirm Payment',
+      scanToPay: 'Scan to Pay',
+      processing: 'Processing Payment',
+      processingWait: 'Please wait while we confirm your transaction...',
+      success: 'Payment Success!',
+      successMessage: 'Transaction has been recorded successfully.',
+      error: 'Payment Failed',
+      errorMessage: 'There was an error processing your payment. Please try again.'
+    }
+  },
+  id: {
+    appName: 'P53. POS',
+    appDescription: 'Point of Sale yang sederhana, ringan, dan bertenaga untuk bisnis Anda.',
+    loading: 'Memuat P53. POS...',
+    login: {
+      title: 'Masuk',
+      googleLogin: 'Masuk dengan Google',
+      localLogin: 'Masuk Lokal (Mode Offline)',
+      username: 'Nama Pengguna',
+      password: 'Kata Sandi',
+      storeId: 'ID Toko (ID Tenant)',
+      loginButton: 'Masuk',
+      backToGoogle: 'Kembali ke Masuk Google',
+      error: 'Kredensial tidak valid. Gunakan admin/admin atau staff/staff.'
+    },
+    sidebar: {
+      pos: 'POS',
+      inventory: 'Inventaris',
+      history: 'Riwayat',
+      dashboard: 'Dasbor',
+      logout: 'Keluar',
+      language: 'Bahasa'
+    },
+    pos: {
+      searchPlaceholder: 'Cari produk...',
+      allCategories: 'Semua Kategori',
+      cart: 'Keranjang',
+      cartTitle: 'Pesanan Saat Ini',
+      emptyCart: 'Keranjang Anda kosong',
+      subtotal: 'Subtotal',
+      tax: 'Pajak (0%)',
+      total: 'Total',
+      checkout: 'Bayar',
+      clear: 'Bersihkan',
+      soldOut: 'Habis'
+    },
+    common: {
+      offlineMode: 'Mode Offline',
+      actions: 'Aksi',
+      save: 'Simpan',
+      cancel: 'Batal',
+      tryAgain: 'Coba Lagi',
+      admin: 'Admin',
+      staff: 'Staf'
+    },
+    inventory: {
+      title: 'Manajemen Inventaris',
+      addProduct: 'Tambah Produk',
+      editProduct: 'Edit Produk',
+      name: 'Nama Produk',
+      price: 'Harga',
+      stock: 'Stok',
+      category: 'Kategori',
+      imageUrl: 'URL Gambar (Opsional)',
+      save: 'Simpan Produk',
+      cancel: 'Batal',
+      deleteConfirm: 'Apakah Anda yakin ingin menghapus produk ini?',
+      noProducts: 'Produk tidak ditemukan. Tambahkan beberapa untuk memulai!'
+    },
+    history: {
+      title: 'Riwayat Transaksi',
+      noTransactions: 'Transaksi tidak ditemukan.',
+      id: 'ID Transaksi',
+      date: 'Tanggal',
+      items: 'Item',
+      amount: 'Jumlah',
+      method: 'Metode',
+      status: 'Status'
+    },
+    dashboard: {
+      title: 'Ikhtisar Bisnis',
+      totalSales: 'Total Penjualan',
+      totalTransactions: 'Total Transaksi',
+      totalProducts: 'Total Produk',
+      totalRevenue: 'Total Pendapatan',
+      recentSales: 'Penjualan Terbaru',
+      recentActivity: 'Aktivitas Terbaru',
+      salesTrend: 'Tren Penjualan (7 Hari Terakhir)',
+      fromLastMonth: 'dari bulan lalu',
+      acrossBranches: 'Di semua cabang',
+      topProducts: 'Produk Teratas',
+      inStock: 'tersedia',
+      newOrderOf: 'Pesanan baru sebesar',
+      completed: 'selesai'
+    },
+    checkout: {
+      title: 'Pembayaran',
+      paymentMethod: 'Pilih Metode Pembayaran',
+      cash: 'Tunai',
+      qris: 'QRIS',
+      confirmPayment: 'Konfirmasi Pembayaran',
+      scanToPay: 'Pindai untuk Membayar',
+      processing: 'Memproses Pembayaran',
+      processingWait: 'Harap tunggu sementara kami mengonfirmasi transaksi Anda...',
+      success: 'Pembayaran Berhasil!',
+      successMessage: 'Transaksi telah berhasil dicatat.',
+      error: 'Pembayaran Gagal',
+      errorMessage: 'Terjadi kesalahan saat memproses pembayaran Anda. Silakan coba lagi.'
+    }
+  }
+};

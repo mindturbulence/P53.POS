@@ -54,29 +54,40 @@ import { authService } from './services/authService';
 import { dataService, useFirebase } from './services/dataService';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UserProfile, Product, CartItem, Transaction, TransactionItem } from './types';
+import { Language, translations } from './translations';
 
 // Register GSAP plugin
 gsap.registerPlugin(useGSAP);
 
 // --- Components ---
 
-const LoadingScreen = () => (
+const LoadingScreen = ({ lang }: { lang: Language }) => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50">
     <motion.div
       animate={{ rotate: 360 }}
       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
       className="w-12 h-12 border-4 border-stone-200 border-t-stone-900 rounded-full mb-4"
     />
-    <p className="text-stone-500 font-medium">Loading P53. POS...</p>
+    <p className="text-stone-500 font-medium">{translations[lang].loading}</p>
   </div>
 );
 
-const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) => void }) => {
+const LoginScreen = ({ 
+  onLoginSuccess, 
+  lang, 
+  onLanguageChange 
+}: { 
+  onLoginSuccess: (user: UserProfile) => void,
+  lang: Language,
+  onLanguageChange: (lang: Language) => void
+}) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [tenantId, setTenantId] = useState('default');
   const [error, setError] = useState('');
   const [isLocal, setIsLocal] = useState(false);
+
+  const t = translations[lang];
 
   const handleLocalLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,12 +103,22 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
   return (
     <div className="min-h-screen flex items-center justify-center bg-stone-50 p-4">
       <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-stone-100">
+        <div className="flex justify-end mb-4">
+          <select 
+            value={lang} 
+            onChange={(e) => onLanguageChange(e.target.value as Language)}
+            className="text-xs bg-stone-100 border-none rounded-lg px-2 py-1 focus:ring-0 cursor-pointer"
+          >
+            <option value="en">English</option>
+            <option value="id">Bahasa Indonesia</option>
+          </select>
+        </div>
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-stone-900 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <ShoppingCart className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-stone-900 mb-2">P53. POS</h1>
-          <p className="text-stone-500">Simple, lightweight, and powerful Point of Sale for your business.</p>
+          <h1 className="text-3xl font-bold text-stone-900 mb-2">{t.appName}</h1>
+          <p className="text-stone-500">{t.appDescription}</p>
         </div>
 
         {!isLocal ? (
@@ -107,17 +128,17 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
               className="w-full flex items-center justify-center gap-3 bg-white border border-stone-200 text-stone-700 py-3 rounded-xl font-medium hover:bg-stone-50 transition-all shadow-sm"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" referrerPolicy="no-referrer" />
-              Continue with Google
+              {t.login.googleLogin}
             </button>
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-stone-100"></div></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-stone-400">Or</span></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-stone-400">{lang === 'id' ? 'Atau' : 'Or'}</span></div>
             </div>
             <button
               onClick={() => setIsLocal(true)}
               className="w-full py-3 text-stone-500 hover:text-stone-900 font-medium transition-all"
             >
-              Use Local Account
+              {t.login.localLogin}
             </button>
           </div>
         ) : (
@@ -129,7 +150,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Store ID (Tenant ID)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">{t.login.storeId}</label>
               <input
                 type="text"
                 value={tenantId}
@@ -140,7 +161,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Username</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">{t.login.username}</label>
               <input
                 type="text"
                 value={username}
@@ -151,7 +172,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">{t.login.password}</label>
               <input
                 type="password"
                 value={password}
@@ -165,14 +186,14 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
               type="submit"
               className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 transition-all shadow-md"
             >
-              Login
+              {t.login.loginButton}
             </button>
             <button
               type="button"
               onClick={() => setIsLocal(false)}
               className="w-full py-2 text-stone-400 hover:text-stone-600 text-sm font-medium transition-all"
             >
-              Back to Google Login
+              {t.login.backToGoogle}
             </button>
           </form>
         )}
@@ -180,7 +201,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
         {!useFirebase && (
           <div className="mt-8 p-4 bg-amber-50 rounded-2xl border border-amber-100">
             <p className="text-xs text-amber-700 text-center">
-              <strong>Offline Mode:</strong> Firebase is not configured. Data will be saved locally in your browser.
+              <strong>{t.common.offlineMode}:</strong> {lang === 'id' ? 'Firebase tidak dikonfigurasi. Data akan disimpan secara lokal di browser Anda.' : 'Firebase is not configured. Data will be saved locally in your browser.'}
             </p>
           </div>
         )}
@@ -194,7 +215,17 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: UserProfile) =
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem('pos_lang');
+    return (saved as Language) || 'en';
+  });
   const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'history' | 'dashboard'>('pos');
+  
+  const t = translations[lang];
+
+  useEffect(() => {
+    localStorage.setItem('pos_lang', lang);
+  }, [lang]);
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -209,27 +240,32 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChange(async (user) => {
-      if (user && user.uid.startsWith('local-')) {
-        setUser(user);
-        setLoading(false);
-      } else if (user) {
-        // Firebase user detected, fetch full profile
-        const profile = await dataService.getCurrentUser(user.uid);
-        if (profile) {
-          setUser(profile);
+      try {
+        if (user && user.uid.startsWith('local-')) {
+          setUser(user);
+        } else if (user) {
+          // Firebase user detected, fetch full profile
+          const profile = await dataService.getCurrentUser(user.uid);
+          if (profile) {
+            setUser(profile);
+          } else {
+            // Create new user profile in Firebase
+            const newUser: UserProfile = {
+              ...user,
+              role: 'staff',
+              tenantId: user.tenantId || user.uid, // Ensure tenantId is present
+              createdAt: Timestamp.now(),
+            };
+            await dataService.saveUser(newUser);
+            setUser(newUser);
+          }
         } else {
-          // Create new user profile in Firebase
-          const newUser: UserProfile = {
-            ...user,
-            role: 'staff',
-            createdAt: Timestamp.now(),
-          };
-          await dataService.saveUser(newUser);
-          setUser(newUser);
+          setUser(null);
         }
-        setLoading(false);
-      } else {
+      } catch (error) {
+        console.error('Auth check error:', error);
         setUser(null);
+      } finally {
         setLoading(false);
       }
     });
@@ -237,7 +273,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.tenantId) return;
 
     const unsubscribeProducts = dataService.getProducts(user.tenantId, setProducts);
     const unsubscribeTransactions = dataService.getTransactions(user.tenantId, setTransactions);
@@ -407,11 +443,15 @@ export default function App() {
   // --- UI Helpers ---
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat(lang === 'id' ? 'id-ID' : 'en-US', { 
+      style: 'currency', 
+      currency: lang === 'id' ? 'IDR' : 'USD', 
+      minimumFractionDigits: 0 
+    }).format(amount);
   };
 
-  if (loading) return <LoadingScreen />;
-  if (!user) return <LoginScreen onLoginSuccess={setUser} />;
+  if (loading) return <LoadingScreen lang={lang} />;
+  if (!user) return <LoginScreen onLoginSuccess={setUser} lang={lang} onLanguageChange={setLang} />;
 
   return (
     <ErrorBoundary>
@@ -427,7 +467,7 @@ export default function App() {
               <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center">
                 <ShoppingCart className="text-white w-5 h-5" />
               </div>
-              <span className="text-xl font-bold tracking-tight">P53. POS</span>
+              <span className="text-xl font-bold tracking-tight">{t.appName}</span>
             </div>
 
             <nav className="flex-1 space-y-2">
@@ -436,39 +476,50 @@ export default function App() {
                 className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'pos' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
               >
                 <LayoutDashboard size={20} />
-                <span className="font-medium">Point of Sale</span>
+                <span className="font-medium">{t.sidebar.pos}</span>
               </button>
               <button
                 onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}
                 className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'inventory' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
               >
                 <Package size={20} />
-                <span className="font-medium">Inventory</span>
+                <span className="font-medium">{t.sidebar.inventory}</span>
               </button>
               <button
                 onClick={() => { setActiveTab('history'); setIsSidebarOpen(false); }}
                 className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'history' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
               >
                 <History size={20} />
-                <span className="font-medium">Transactions</span>
+                <span className="font-medium">{t.sidebar.history}</span>
               </button>
               <button
                 onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
                 className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
               >
                 <TrendingUp size={20} />
-                <span className="font-medium">Dashboard</span>
+                <span className="font-medium">{t.sidebar.dashboard}</span>
               </button>
             </nav>
 
             <div className="mt-auto pt-6 border-t border-stone-100">
+              <div className="flex items-center justify-between px-4 py-2 bg-stone-50 rounded-xl mb-4">
+                <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">{t.sidebar.language}</span>
+                <select 
+                  value={lang} 
+                  onChange={(e) => setLang(e.target.value as Language)}
+                  className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer text-stone-600 font-medium"
+                >
+                  <option value="en">EN</option>
+                  <option value="id">ID</option>
+                </select>
+              </div>
               <div className="flex items-center gap-3 px-4 py-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-stone-100 overflow-hidden border border-stone-200">
                   <img src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} alt="Profile" referrerPolicy="no-referrer" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{user.displayName}</p>
-                  <p className="text-xs text-stone-500 capitalize">{user.role}</p>
+                  <p className="text-xs text-stone-500 capitalize">{user.role === 'admin' ? t.common.admin : t.common.staff}</p>
                 </div>
               </div>
               <button
@@ -476,7 +527,7 @@ export default function App() {
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium"
               >
                 <LogOut size={20} />
-                <span>Sign Out</span>
+                <span>{t.sidebar.logout}</span>
               </button>
             </div>
           </div>
@@ -488,7 +539,7 @@ export default function App() {
             <ShoppingCart className="text-stone-900 w-6 h-6" />
             <span className="text-lg font-bold">P53.</span>
             {!useFirebase && (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Offline</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">{t.common.offlineMode}</span>
             )}
           </div>
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-stone-100 rounded-lg">
@@ -514,16 +565,16 @@ export default function App() {
                   <div className="flex-1 flex flex-col gap-6">
                     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-bold">Menu</h2>
+                        <h2 className="text-2xl font-bold">{t.sidebar.pos}</h2>
                         {!useFirebase && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">Offline</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">{t.common.offlineMode}</span>
                         )}
                       </div>
                       <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
                         <input
                           type="text"
-                          placeholder="Search products..."
+                          placeholder={t.pos.searchPlaceholder}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="w-full pl-10 pr-4 py-2 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10 transition-all"
@@ -547,16 +598,16 @@ export default function App() {
                             <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
                           </div>
                           <h3 className="font-semibold text-stone-900 truncate">{product.name}</h3>
-                          <p className="text-sm text-stone-500 mb-2">{product.category || 'Uncategorized'}</p>
+                          <p className="text-sm text-stone-500 mb-2">{product.category || (lang === 'id' ? 'Tanpa Kategori' : 'Uncategorized')}</p>
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-stone-900">{formatCurrency(product.price)}</span>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${product.stock < 10 ? 'bg-red-100 text-red-600' : 'bg-stone-100 text-stone-600'}`}>
-                              Stock: {product.stock}
+                              {t.inventory.stock}: {product.stock}
                             </span>
                           </div>
                           {product.stock <= 0 && (
                             <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-2xl">
-                              <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Sold Out</span>
+                              <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{t.pos.soldOut}</span>
                             </div>
                           )}
                         </motion.button>
@@ -567,7 +618,7 @@ export default function App() {
                   {/* Cart Sidebar */}
                   <div className="w-full lg:w-96 bg-white border border-stone-200 rounded-3xl shadow-xl flex flex-col overflow-hidden">
                     <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                      <h2 className="text-xl font-bold">Current Order</h2>
+                      <h2 className="text-xl font-bold">{t.pos.cartTitle}</h2>
                       <button onClick={() => setCart([])} className="text-stone-400 hover:text-red-500 transition-colors">
                         <Trash2 size={20} />
                       </button>
@@ -577,7 +628,7 @@ export default function App() {
                       {cart.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-stone-400 text-center">
                           <ShoppingCart size={48} className="mb-4 opacity-20" />
-                          <p>Your cart is empty</p>
+                          <p>{t.pos.emptyCart}</p>
                         </div>
                       ) : (
                         cart.map(item => (
@@ -607,15 +658,15 @@ export default function App() {
 
                     <div className="p-6 bg-stone-50 border-t border-stone-200 space-y-4">
                       <div className="flex justify-between items-center text-stone-500">
-                        <span>Subtotal</span>
+                        <span>{t.pos.subtotal}</span>
                         <span>{formatCurrency(cartTotal)}</span>
                       </div>
                       <div className="flex justify-between items-center text-stone-500">
-                        <span>Tax (0%)</span>
+                        <span>{t.pos.tax} (0%)</span>
                         <span>{formatCurrency(0)}</span>
                       </div>
                       <div className="flex justify-between items-center text-xl font-bold text-stone-900 pt-2 border-t border-stone-200">
-                        <span>Total</span>
+                        <span>{t.pos.total}</span>
                         <span>{formatCurrency(cartTotal)}</span>
                       </div>
                       <button
@@ -623,7 +674,7 @@ export default function App() {
                         disabled={cart.length === 0}
                         className="w-full bg-stone-900 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                       >
-                        Checkout
+                        {t.pos.checkout}
                         <ChevronRight size={20} />
                       </button>
                     </div>
@@ -641,9 +692,9 @@ export default function App() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-2xl font-bold">Inventory Management</h2>
+                      <h2 className="text-2xl font-bold">{t.inventory.title}</h2>
                       {!useFirebase && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">Offline Mode</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">{t.common.offlineMode}</span>
                       )}
                     </div>
                     {user.role === 'admin' && (
@@ -652,7 +703,7 @@ export default function App() {
                         className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-stone-800 transition-all"
                       >
                         <Plus size={20} />
-                        Add Product
+                        {t.inventory.addProduct}
                       </button>
                     )}
                   </div>
@@ -662,11 +713,11 @@ export default function App() {
                       <table className="w-full text-left">
                         <thead className="bg-stone-50 border-b border-stone-200">
                           <tr>
-                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">Product</th>
-                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">Category</th>
-                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">Price</th>
-                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">Stock</th>
-                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider text-right">Actions</th>
+                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.product}</th>
+                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.category}</th>
+                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.price}</th>
+                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.stock}</th>
+                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider text-right">{t.common.actions}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-100">
@@ -684,7 +735,7 @@ export default function App() {
                               <td className="px-6 py-4 font-medium">{formatCurrency(product.price)}</td>
                               <td className="px-6 py-4">
                                 <span className={`px-2 py-1 rounded-md text-xs font-bold ${product.stock < 10 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                  {product.stock} units
+                                  {product.stock} {lang === 'id' ? 'unit' : 'units'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-right">
@@ -722,30 +773,35 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  <h2 className="text-2xl font-bold">Transaction History</h2>
+                  <h2 className="text-2xl font-bold">{t.history.title}</h2>
                   <div className="grid gap-4">
-                    {transactions.map(tx => (
+                    {transactions.length === 0 ? (
+                      <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400">
+                        <p>{t.history.noTransactions}</p>
+                      </div>
+                    ) : (
+                      transactions.map(tx => (
                       <div key={tx.id} className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${tx.paymentMethod === 'qris' ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600'}`}>
                             {tx.paymentMethod === 'qris' ? <CreditCard size={24} /> : <Banknote size={24} />}
                           </div>
                           <div>
-                            <p className="font-bold text-lg">Order #{tx.id.slice(-6).toUpperCase()}</p>
-                            <p className="text-sm text-stone-500">{tx.createdAt.toDate().toLocaleString()} • {tx.items.length} items</p>
+                            <p className="font-bold text-lg">{lang === 'id' ? 'Pesanan' : 'Order'} #{tx.id.slice(-6).toUpperCase()}</p>
+                            <p className="text-sm text-stone-500">{tx.createdAt.toDate().toLocaleString()} • {tx.items.length} {lang === 'id' ? 'item' : 'items'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-8">
                           <div className="text-right">
-                            <p className="text-xs text-stone-400 uppercase font-bold tracking-wider mb-1">Total Amount</p>
+                            <p className="text-xs text-stone-400 uppercase font-bold tracking-wider mb-1">{t.pos.total}</p>
                             <p className="text-xl font-black text-stone-900">{formatCurrency(tx.totalAmount)}</p>
                           </div>
                           <div className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {tx.status}
+                            {tx.status === 'completed' ? t.dashboard.completed : tx.status}
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )))}
                   </div>
                 </motion.div>
               )}
@@ -759,7 +815,7 @@ export default function App() {
                   className="space-y-8"
                 >
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">Business Overview</h2>
+                    <h2 className="text-2xl font-bold">{t.dashboard.title}</h2>
                     {user.role === 'admin' && products.length === 0 && (
                       <button
                         onClick={async () => {
@@ -786,12 +842,12 @@ export default function App() {
                         <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
                           <DollarSign size={24} />
                         </div>
-                        <span className="text-stone-500 font-medium">Total Revenue</span>
+                        <span className="text-stone-500 font-medium">{t.dashboard.totalRevenue}</span>
                       </div>
                       <p className="text-3xl font-black">{formatCurrency(transactions.reduce((sum, tx) => sum + tx.totalAmount, 0))}</p>
                       <div className="mt-4 flex items-center gap-2 text-green-600 text-sm font-bold">
                         <TrendingUp size={16} />
-                        <span>+12.5% from last month</span>
+                        <span>+12.5% {t.dashboard.fromLastMonth}</span>
                       </div>
                     </div>
 
@@ -800,11 +856,11 @@ export default function App() {
                         <div className="w-12 h-12 bg-stone-900 text-white rounded-2xl flex items-center justify-center">
                           <ShoppingCart size={24} />
                         </div>
-                        <span className="text-stone-500 font-medium">Total Sales</span>
+                        <span className="text-stone-500 font-medium">{t.dashboard.totalSales}</span>
                       </div>
                       <p className="text-3xl font-black">{transactions.length}</p>
                       <div className="mt-4 flex items-center gap-2 text-stone-400 text-sm font-bold">
-                        <span>Across all branches</span>
+                        <span>{t.dashboard.acrossBranches}</span>
                       </div>
                     </div>
 
@@ -813,13 +869,13 @@ export default function App() {
                         <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
                           <Users size={24} />
                         </div>
-                        <span className="text-stone-500 font-medium">Top Products</span>
+                        <span className="text-stone-500 font-medium">{t.dashboard.topProducts}</span>
                       </div>
                       <div className="space-y-2">
                         {products.slice(0, 3).map(p => (
                           <div key={p.id} className="flex justify-between items-center text-sm">
                             <span className="text-stone-600 font-medium">{p.name}</span>
-                            <span className="font-bold">{p.stock} in stock</span>
+                            <span className="font-bold">{p.stock} {t.dashboard.inStock}</span>
                           </div>
                         ))}
                       </div>
@@ -827,14 +883,14 @@ export default function App() {
                   </div>
 
                   <div className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm">
-                    <h3 className="text-xl font-bold mb-6">Recent Activity</h3>
+                    <h3 className="text-xl font-bold mb-6">{t.dashboard.recentActivity}</h3>
                     <div className="space-y-6">
                       {transactions.slice(0, 5).map(tx => (
                         <div key={tx.id} className="flex items-center gap-4">
                           <div className="w-2 h-2 rounded-full bg-stone-900" />
                           <div className="flex-1">
                             <p className="text-sm font-medium">
-                              New order of <span className="font-bold">{formatCurrency(tx.totalAmount)}</span> completed
+                              {t.dashboard.newOrderOf} <span className="font-bold">{formatCurrency(tx.totalAmount)}</span> {t.dashboard.completed}
                             </p>
                             <p className="text-xs text-stone-400">{tx.createdAt.toDate().toLocaleString()}</p>
                           </div>
@@ -868,7 +924,7 @@ export default function App() {
                 className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
               >
                 <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                  <h3 className="text-xl font-bold">{showProductModal.product ? 'Edit Product' : 'Add New Product'}</h3>
+                  <h3 className="text-xl font-bold">{showProductModal.product ? t.inventory.editProduct : t.inventory.addProduct}</h3>
                   <button onClick={() => setShowProductModal({ show: false })} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
                     <X size={20} />
                   </button>
@@ -876,7 +932,7 @@ export default function App() {
                 <form onSubmit={handleSaveProduct} className="p-8 space-y-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Product Name</label>
+                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.inventory.name}</label>
                       <input
                         name="name"
                         required
@@ -887,7 +943,7 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Price (IDR)</label>
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.inventory.price} ({lang === 'id' ? 'IDR' : 'USD'})</label>
                         <input
                           name="price"
                           type="number"
@@ -898,7 +954,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Stock</label>
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.inventory.stock}</label>
                         <input
                           name="stock"
                           type="number"
@@ -910,7 +966,7 @@ export default function App() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Category</label>
+                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.inventory.category}</label>
                       <input
                         name="category"
                         defaultValue={showProductModal.product?.category}
@@ -919,7 +975,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Image URL (Optional)</label>
+                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.inventory.imageUrl}</label>
                       <input
                         name="imageUrl"
                         defaultValue={showProductModal.product?.imageUrl}
@@ -932,7 +988,7 @@ export default function App() {
                     type="submit"
                     className="w-full bg-stone-900 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-stone-800 transition-all"
                   >
-                    {showProductModal.product ? 'Update Product' : 'Create Product'}
+                    {showProductModal.product ? t.common.save : t.common.save}
                   </button>
                 </form>
               </motion.div>
@@ -958,7 +1014,7 @@ export default function App() {
                 className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
               >
                 <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                  <h3 className="text-xl font-bold">Payment</h3>
+                  <h3 className="text-xl font-bold">{t.pos.checkout}</h3>
                   <button onClick={() => setShowCheckoutModal(false)} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
                     <X size={20} />
                   </button>
@@ -968,26 +1024,26 @@ export default function App() {
                   {checkoutStatus === 'idle' && (
                     <>
                       <div className="text-center">
-                        <p className="text-stone-400 font-bold uppercase tracking-widest text-xs mb-2">Total Amount</p>
+                        <p className="text-stone-400 font-bold uppercase tracking-widest text-xs mb-2">{t.pos.total}</p>
                         <p className="text-4xl font-black text-stone-900">{formatCurrency(cartTotal)}</p>
                       </div>
 
                       <div className="space-y-4">
-                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Select Payment Method</p>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">{t.checkout.paymentMethod}</p>
                         <div className="grid grid-cols-2 gap-4">
                           <button
                             onClick={() => setPaymentMethod('cash')}
                             className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'cash' ? 'border-stone-900 bg-stone-50' : 'border-stone-100 hover:border-stone-200'}`}
                           >
                             <Banknote size={32} className={paymentMethod === 'cash' ? 'text-stone-900' : 'text-stone-300'} />
-                            <span className="font-bold">Cash</span>
+                            <span className="font-bold">{t.checkout.cash}</span>
                           </button>
                           <button
                             onClick={() => setPaymentMethod('qris')}
                             className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'qris' ? 'border-stone-900 bg-stone-50' : 'border-stone-100 hover:border-stone-200'}`}
                           >
                             <CreditCard size={32} className={paymentMethod === 'qris' ? 'text-stone-900' : 'text-stone-300'} />
-                            <span className="font-bold">QRIS</span>
+                            <span className="font-bold">{t.checkout.qris}</span>
                           </button>
                         </div>
                       </div>
@@ -1002,7 +1058,7 @@ export default function App() {
                                ))}
                              </div>
                           </div>
-                          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Scan to Pay</p>
+                          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">{t.checkout.scanToPay}</p>
                         </div>
                       )}
 
@@ -1010,7 +1066,7 @@ export default function App() {
                         onClick={handleCheckout}
                         className="w-full bg-stone-900 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-stone-800 transition-all"
                       >
-                        Confirm Payment
+                        {t.checkout.confirmPayment}
                       </button>
                     </>
                   )}
@@ -1022,8 +1078,8 @@ export default function App() {
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                         className="w-16 h-16 border-4 border-stone-200 border-t-stone-900 rounded-full mb-6"
                       />
-                      <h4 className="text-xl font-bold mb-2">Processing Payment</h4>
-                      <p className="text-stone-500">Please wait while we confirm your transaction...</p>
+                      <h4 className="text-xl font-bold mb-2">{t.checkout.processing}</h4>
+                      <p className="text-stone-500">{t.checkout.processingWait}</p>
                     </div>
                   )}
 
@@ -1036,8 +1092,8 @@ export default function App() {
                       >
                         <CheckCircle2 size={48} />
                       </motion.div>
-                      <h4 className="text-2xl font-bold mb-2 text-green-600">Payment Success!</h4>
-                      <p className="text-stone-500">Transaction has been recorded successfully.</p>
+                      <h4 className="text-2xl font-bold mb-2 text-green-600">{t.checkout.success}</h4>
+                      <p className="text-stone-500">{t.checkout.successMessage}</p>
                     </div>
                   )}
 
@@ -1046,13 +1102,13 @@ export default function App() {
                       <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6">
                         <XCircle size={48} />
                       </div>
-                      <h4 className="text-2xl font-bold mb-2 text-red-600">Payment Failed</h4>
-                      <p className="text-stone-500">There was an error processing your payment. Please try again.</p>
+                      <h4 className="text-2xl font-bold mb-2 text-red-600">{t.checkout.error}</h4>
+                      <p className="text-stone-500">{t.checkout.errorMessage}</p>
                       <button
                         onClick={() => setCheckoutStatus('idle')}
                         className="mt-6 text-stone-900 font-bold underline"
                       >
-                        Try Again
+                        {t.common.tryAgain}
                       </button>
                     </div>
                   )}

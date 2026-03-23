@@ -154,14 +154,26 @@ export const dataService = {
       try {
         const docRef = doc(db, 'users', uid);
         const docSnap = await getDoc(docRef);
-        return docSnap.exists() ? (docSnap.data() as UserProfile) : null;
+        if (docSnap.exists()) {
+          const data = docSnap.data() as UserProfile;
+          // Migration: Ensure tenantId exists for old users
+          if (!data.tenantId) {
+            data.tenantId = uid;
+          }
+          return data;
+        }
+        return null;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, 'users');
         return null;
       }
     } else {
       const users = getLocal<UserProfile>(STORAGE_KEYS.USERS);
-      return users.find(u => u.uid === uid) || null;
+      const user = users.find(u => u.uid === uid) || null;
+      if (user && !user.tenantId) {
+        user.tenantId = 'default';
+      }
+      return user;
     }
   },
 

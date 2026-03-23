@@ -16,7 +16,13 @@ const STORAGE_KEYS = {
 // --- Local Auth Helpers ---
 const getLocalUser = (): UserProfile | null => {
   const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-  return data ? JSON.parse(data) : null;
+  if (!data) return null;
+  const user = JSON.parse(data) as UserProfile;
+  // Migration: Ensure tenantId exists for old local users
+  if (!user.tenantId) {
+    user.tenantId = 'default';
+  }
+  return user;
 };
 
 const saveLocalUser = (user: UserProfile) => {
