@@ -21,6 +21,7 @@ export const translations = {
       inventory: 'Inventory',
       history: 'History',
       dashboard: 'Dashboard',
+      settings: 'Settings',
       logout: 'Logout',
       language: 'Language'
     },
@@ -48,6 +49,7 @@ export const translations = {
     },
     inventory: {
       title: 'Inventory Management',
+      product: 'Product',
       addProduct: 'Add Product',
       editProduct: 'Edit Product',
       name: 'Product Name',
@@ -99,6 +101,37 @@ export const translations = {
       successMessage: 'Transaction has been recorded successfully.',
       error: 'Payment Failed',
       errorMessage: 'There was an error processing your payment. Please try again.'
+    },
+    settings: {
+      title: 'Admin Settings',
+      tenants: 'Tenants',
+      addTenant: 'Add New Tenant',
+      tenantName: 'Tenant Name',
+      tenantType: 'Tenant Type',
+      fnb: 'Food & Beverage',
+      clothing: 'Clothing Store',
+      general: 'General Retail',
+      service: 'Service (Barber, Salon, etc.)',
+      grocery: 'Grocery / Mini Market',
+      electronics: 'Electronics & Gadgets',
+      pharmacy: 'Pharmacy / Medical',
+      bookstore: 'Bookstore & Stationery',
+      attributes: 'Product Attributes',
+      size: 'Size',
+      color: 'Color',
+      spiciness: 'Spiciness Level',
+      toppings: 'Toppings',
+      duration: 'Duration (mins)',
+      specialist: 'Specialist / Staff',
+      unit: 'Unit (pcs, kg, etc.)',
+      expiryDate: 'Expiry Date',
+      brand: 'Brand',
+      warranty: 'Warranty Period',
+      dosage: 'Dosage / Usage',
+      prescriptionRequired: 'Prescription Required',
+      author: 'Author',
+      isbn: 'ISBN',
+      noTenants: 'No tenants found.'
     }
   },
   id: {
@@ -121,6 +154,7 @@ export const translations = {
       inventory: 'Inventaris',
       history: 'Riwayat',
       dashboard: 'Dasbor',
+      settings: 'Pengaturan',
       logout: 'Keluar',
       language: 'Bahasa'
     },
@@ -148,6 +182,7 @@ export const translations = {
     },
     inventory: {
       title: 'Manajemen Inventaris',
+      product: 'Produk',
       addProduct: 'Tambah Produk',
       editProduct: 'Edit Produk',
       name: 'Nama Produk',
@@ -199,6 +234,37 @@ export const translations = {
       successMessage: 'Transaksi telah berhasil dicatat.',
       error: 'Pembayaran Gagal',
       errorMessage: 'Terjadi kesalahan saat memproses pembayaran Anda. Silakan coba lagi.'
+    },
+    settings: {
+      title: 'Pengaturan Admin',
+      tenants: 'Tenant',
+      addTenant: 'Tambah Tenant Baru',
+      tenantName: 'Nama Tenant',
+      tenantType: 'Tipe Tenant',
+      fnb: 'Makanan & Minuman',
+      clothing: 'Toko Pakaian',
+      general: 'Ritel Umum',
+      service: 'Jasa (Barber, Salon, dll.)',
+      grocery: 'Toko Kelontong / Mini Market',
+      electronics: 'Elektronik & Gadget',
+      pharmacy: 'Farmasi / Medis',
+      bookstore: 'Toko Buku & Alat Tulis',
+      attributes: 'Atribut Produk',
+      size: 'Ukuran',
+      color: 'Warna',
+      spiciness: 'Tingkat Kepedasan',
+      toppings: 'Topping',
+      duration: 'Durasi (menit)',
+      specialist: 'Spesialis / Staf',
+      unit: 'Satuan (pcs, kg, dll.)',
+      expiryDate: 'Tanggal Kedaluwarsa',
+      brand: 'Merek',
+      warranty: 'Masa Garansi',
+      dosage: 'Dosis / Penggunaan',
+      prescriptionRequired: 'Perlu Resep Dokter',
+      author: 'Penulis',
+      isbn: 'ISBN',
+      noTenants: 'Tenant tidak ditemukan.'
     }
   }
 };

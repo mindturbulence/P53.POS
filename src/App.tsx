@@ -45,7 +45,8 @@ import {
   AlertCircle, 
   TrendingUp, 
   DollarSign, 
-  Users 
+  Users,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import gsap from 'gsap';
@@ -53,7 +54,7 @@ import { useGSAP } from '@gsap/react';
 import { authService } from './services/authService';
 import { dataService, useFirebase } from './services/dataService';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { UserProfile, Product, CartItem, Transaction, TransactionItem } from './types';
+import { UserProfile, Product, CartItem, Transaction, TransactionItem, Tenant, TenantType } from './types';
 import { Language, translations } from './translations';
 
 // Register GSAP plugin
@@ -219,7 +220,7 @@ export default function App() {
     const saved = localStorage.getItem('pos_lang');
     return (saved as Language) || 'en';
   });
-  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'history' | 'dashboard'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'history' | 'dashboard' | 'settings'>('pos');
   
   const t = translations[lang];
 
@@ -229,6 +230,8 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showProductModal, setShowProductModal] = useState<{ show: boolean, product?: Product }>({ show: false });
@@ -277,10 +280,20 @@ export default function App() {
 
     const unsubscribeProducts = dataService.getProducts(user.tenantId, setProducts);
     const unsubscribeTransactions = dataService.getTransactions(user.tenantId, setTransactions);
+    
+    // Fetch current tenant info
+    dataService.getTenant(user.tenantId).then(setCurrentTenant);
+
+    // If admin, fetch all tenants
+    let unsubscribeTenants = () => {};
+    if (user.role === 'admin') {
+      unsubscribeTenants = dataService.getTenants(setTenants);
+    }
 
     return () => {
       unsubscribeProducts();
       unsubscribeTransactions();
+      unsubscribeTenants();
     };
   }, [user]);
 
@@ -408,6 +421,31 @@ export default function App() {
     e.preventDefault();
     if (!user) return;
     const formData = new FormData(e.currentTarget);
+    
+    const attributes: Record<string, any> = {};
+    if (currentTenant?.type === 'fnb') {
+      attributes.spiciness = formData.get('spiciness');
+      attributes.toppings = formData.get('toppings');
+    } else if (currentTenant?.type === 'clothing') {
+      attributes.size = formData.get('size');
+      attributes.color = formData.get('color');
+    } else if (currentTenant?.type === 'service') {
+      attributes.duration = formData.get('duration');
+      attributes.specialist = formData.get('specialist');
+    } else if (currentTenant?.type === 'grocery') {
+      attributes.unit = formData.get('unit');
+      attributes.expiryDate = formData.get('expiryDate');
+    } else if (currentTenant?.type === 'electronics') {
+      attributes.brand = formData.get('brand');
+      attributes.warranty = formData.get('warranty');
+    } else if (currentTenant?.type === 'pharmacy') {
+      attributes.dosage = formData.get('dosage');
+      attributes.prescriptionRequired = formData.get('prescriptionRequired');
+    } else if (currentTenant?.type === 'bookstore') {
+      attributes.author = formData.get('author');
+      attributes.isbn = formData.get('isbn');
+    }
+
     const productData = {
       name: formData.get('name') as string,
       price: Number(formData.get('price')),
@@ -416,7 +454,8 @@ export default function App() {
       imageUrl: formData.get('imageUrl') as string || `https://picsum.photos/seed/${formData.get('name')}/200/200`,
       tenantId: user.tenantId,
       updatedAt: Timestamp.now(),
-      createdBy: user.uid
+      createdBy: user.uid,
+      attributes
     };
 
     try {
@@ -499,6 +538,15 @@ export default function App() {
                 <TrendingUp size={20} />
                 <span className="font-medium">{t.sidebar.dashboard}</span>
               </button>
+              {user.role === 'admin' && (
+                <button
+                  onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
+                  className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-stone-900 text-white shadow-lg' : 'text-stone-500 hover:bg-stone-100'}`}
+                >
+                  <SettingsIcon size={20} />
+                  <span className="font-medium">{t.sidebar.settings}</span>
+                </button>
+              )}
             </nav>
 
             <div className="mt-auto pt-6 border-t border-stone-100">
@@ -605,6 +653,15 @@ export default function App() {
                               {t.inventory.stock}: {product.stock}
                             </span>
                           </div>
+                          {product.attributes && Object.values(product.attributes).some(v => !!v) && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {Object.entries(product.attributes).map(([key, val]) => val && (
+                                <span key={key} className="text-[8px] bg-stone-50 text-stone-400 px-1.5 py-0.5 rounded border border-stone-100 uppercase tracking-tighter">
+                                  {t.settings[key as keyof typeof t.settings] || key}: {val}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {product.stock <= 0 && (
                             <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-2xl">
                               <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{t.pos.soldOut}</span>
@@ -717,6 +774,7 @@ export default function App() {
                             <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.category}</th>
                             <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.price}</th>
                             <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.inventory.stock}</th>
+                            <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider">{t.settings.attributes}</th>
                             <th className="px-6 py-4 font-bold text-stone-500 text-xs uppercase tracking-wider text-right">{t.common.actions}</th>
                           </tr>
                         </thead>
@@ -737,6 +795,15 @@ export default function App() {
                                 <span className={`px-2 py-1 rounded-md text-xs font-bold ${product.stock < 10 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
                                   {product.stock} {lang === 'id' ? 'unit' : 'units'}
                                 </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-wrap gap-1">
+                                  {product.attributes && Object.entries(product.attributes).map(([key, val]) => val && (
+                                    <span key={key} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full border border-stone-200">
+                                      {t.settings[key as keyof typeof t.settings] || key}: {val}
+                                    </span>
+                                  ))}
+                                </div>
                               </td>
                               <td className="px-6 py-4 text-right">
                                 {user.role === 'admin' && (
@@ -900,6 +967,112 @@ export default function App() {
                   </div>
                 </motion.div>
               )}
+              {activeTab === 'settings' && user.role === 'admin' && (
+                <motion.div
+                  key="settings"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-8"
+                >
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">{t.settings.title}</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-1">
+                      <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                        <h3 className="text-lg font-bold mb-6">{t.settings.addTenant}</h3>
+                        <form onSubmit={async (e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.currentTarget);
+                          const name = formData.get('name') as string;
+                          const type = formData.get('type') as TenantType;
+                          if (name && type) {
+                            await dataService.addTenant({ name, type, createdAt: Timestamp.now() });
+                            e.currentTarget.reset();
+                          }
+                        }} className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-stone-700 mb-1">{t.settings.tenantName}</label>
+                            <input
+                              name="name"
+                              type="text"
+                              className="w-full px-4 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                              placeholder="e.g. My Awesome Store"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-stone-700 mb-1">{t.settings.tenantType}</label>
+                            <select
+                              name="type"
+                              className="w-full px-4 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                              required
+                            >
+                              <option value="general">{t.settings.general}</option>
+                              <option value="fnb">{t.settings.fnb}</option>
+                              <option value="clothing">{t.settings.clothing}</option>
+                              <option value="service">{t.settings.service}</option>
+                              <option value="grocery">{t.settings.grocery}</option>
+                              <option value="electronics">{t.settings.electronics}</option>
+                              <option value="pharmacy">{t.settings.pharmacy}</option>
+                              <option value="bookstore">{t.settings.bookstore}</option>
+                            </select>
+                          </div>
+                          <button
+                            type="submit"
+                            className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 transition-all shadow-md flex items-center justify-center gap-2"
+                          >
+                            <Plus size={18} />
+                            {t.settings.addTenant}
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
+                        <div className="p-6 border-b border-stone-100">
+                          <h3 className="text-lg font-bold">{t.settings.tenants}</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead className="bg-stone-50 border-b border-stone-200">
+                              <tr>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.settings.tenantName}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.settings.tenantType}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">ID</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-100">
+                              {tenants.length === 0 ? (
+                                <tr>
+                                  <td colSpan={3} className="px-6 py-12 text-center text-stone-400">
+                                    {t.settings.noTenants}
+                                  </td>
+                                </tr>
+                              ) : (
+                                tenants.map(tenant => (
+                                  <tr key={tenant.id} className="hover:bg-stone-50 transition-colors">
+                                    <td className="px-6 py-4 font-medium">{tenant.name}</td>
+                                    <td className="px-6 py-4">
+                                      <span className="px-2 py-1 bg-stone-100 rounded-md text-xs font-bold uppercase tracking-wider">
+                                        {t.settings[tenant.type as keyof typeof t.settings] || tenant.type}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-xs font-mono text-stone-400">{tenant.id}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </main>
@@ -983,6 +1156,172 @@ export default function App() {
                         placeholder="https://..."
                       />
                     </div>
+
+                    {currentTenant?.type === 'fnb' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.spiciness}</label>
+                          <select
+                            name="spiciness"
+                            defaultValue={showProductModal.product?.attributes?.spiciness}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                          >
+                            <option value="none">None</option>
+                            <option value="mild">Mild</option>
+                            <option value="hot">Hot</option>
+                            <option value="extra_hot">Extra Hot</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.toppings}</label>
+                          <input
+                            name="toppings"
+                            defaultValue={showProductModal.product?.attributes?.toppings}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. Cheese, Egg"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {currentTenant?.type === 'clothing' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.size}</label>
+                          <input
+                            name="size"
+                            defaultValue={showProductModal.product?.attributes?.size}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. S, M, L, XL"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.color}</label>
+                          <input
+                            name="color"
+                            defaultValue={showProductModal.product?.attributes?.color}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. Red, Blue"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {currentTenant?.type === 'service' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.duration}</label>
+                          <input
+                            name="duration"
+                            type="number"
+                            defaultValue={showProductModal.product?.attributes?.duration}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. 30"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.specialist}</label>
+                          <input
+                            name="specialist"
+                            defaultValue={showProductModal.product?.attributes?.specialist}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. John Doe"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {currentTenant?.type === 'grocery' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.unit}</label>
+                          <input
+                            name="unit"
+                            defaultValue={showProductModal.product?.attributes?.unit}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. kg, pcs, box"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.expiryDate}</label>
+                          <input
+                            name="expiryDate"
+                            type="date"
+                            defaultValue={showProductModal.product?.attributes?.expiryDate}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {currentTenant?.type === 'electronics' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.brand}</label>
+                          <input
+                            name="brand"
+                            defaultValue={showProductModal.product?.attributes?.brand}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. Sony, Apple"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.warranty}</label>
+                          <input
+                            name="warranty"
+                            defaultValue={showProductModal.product?.attributes?.warranty}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. 1 Year"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {currentTenant?.type === 'pharmacy' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.dosage}</label>
+                          <input
+                            name="dosage"
+                            defaultValue={showProductModal.product?.attributes?.dosage}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. 3x1 daily"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-6">
+                          <input
+                            name="prescriptionRequired"
+                            type="checkbox"
+                            defaultChecked={showProductModal.product?.attributes?.prescriptionRequired === 'on'}
+                            className="w-5 h-5 rounded border-stone-200 text-stone-900 focus:ring-stone-900/10"
+                          />
+                          <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">{t.settings.prescriptionRequired}</label>
+                        </div>
+                      </div>
+                    )}
+
+                    {currentTenant?.type === 'bookstore' && (
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.author}</label>
+                          <input
+                            name="author"
+                            defaultValue={showProductModal.product?.attributes?.author}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. J.K. Rowling"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.settings.isbn}</label>
+                          <input
+                            name="isbn"
+                            defaultValue={showProductModal.product?.attributes?.isbn}
+                            className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                            placeholder="e.g. 978-3-16..."
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <button
                     type="submit"

@@ -10,6 +10,15 @@ export interface UserProfile {
   createdAt: Timestamp;
 }
 
+export type TenantType = 'fnb' | 'clothing' | 'general' | 'service' | 'grocery' | 'electronics' | 'pharmacy' | 'bookstore';
+
+export interface Tenant {
+  id: string;
+  name: string;
+  type: TenantType;
+  createdAt: Timestamp;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -20,6 +29,7 @@ export interface Product {
   tenantId: string;
   createdBy: string;
   updatedAt: Timestamp;
+  attributes?: Record<string, any>;
 }
 
 export interface CartItem extends Product {

@@ -15,7 +15,7 @@ import {
   addDoc 
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
-import { Product, Transaction, UserProfile } from '../types';
+import { Product, Transaction, UserProfile, Tenant } from '../types';
 
 // Check if Firebase is properly configured
 const isFirebaseConfigured = () => {
@@ -34,7 +34,8 @@ const STORAGE_KEYS = {
   PRODUCTS: 'pos_local_products',
   TRANSACTIONS: 'pos_local_transactions',
   USERS: 'pos_local_users',
-  CURRENT_USER: 'pos_local_current_user'
+  CURRENT_USER: 'pos_local_current_user',
+  TENANTS: 'pos_local_tenants'
 };
 
 // --- Local Storage Helpers ---
@@ -193,6 +194,56 @@ export const dataService = {
         users.push(user);
       }
       saveLocal(STORAGE_KEYS.USERS, users);
+    }
+  },
+
+  // Tenants
+  getTenants: (callback: (tenants: Tenant[]) => void) => {
+    if (useFirebase) {
+      const q = query(collection(db, 'tenants'), orderBy('name'));
+      return onSnapshot(q, (snapshot) => {
+        const tenants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tenant));
+        callback(tenants);
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'tenants'));
+    } else {
+      const tenants = getLocal<Tenant>(STORAGE_KEYS.TENANTS);
+      callback(tenants);
+      return () => {};
+    }
+  },
+
+  addTenant: async (tenant: Omit<Tenant, 'id'>) => {
+    if (useFirebase) {
+      try {
+        const docRef = await addDoc(collection(db, 'tenants'), {
+          ...tenant,
+          createdAt: Timestamp.now()
+        });
+        return docRef.id;
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, 'tenants');
+      }
+    } else {
+      const tenants = getLocal<Tenant>(STORAGE_KEYS.TENANTS);
+      const newTenant = { ...tenant, id: Date.now().toString(), createdAt: new Date() as any } as Tenant;
+      saveLocal(STORAGE_KEYS.TENANTS, [...tenants, newTenant]);
+      return newTenant.id;
+    }
+  },
+
+  getTenant: async (id: string): Promise<Tenant | null> => {
+    if (useFirebase) {
+      try {
+        const docRef = doc(db, 'tenants', id);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Tenant : null;
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, 'tenants');
+        return null;
+      }
+    } else {
+      const tenants = getLocal<Tenant>(STORAGE_KEYS.TENANTS);
+      return tenants.find(t => t.id === id) || null;
     }
   }
 };
