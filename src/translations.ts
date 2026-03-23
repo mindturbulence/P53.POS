@@ -23,7 +23,34 @@ export const translations = {
       dashboard: 'Dashboard',
       settings: 'Settings',
       logout: 'Logout',
-      language: 'Language'
+      language: 'Language',
+      users: 'User Management'
+    },
+    users: {
+      title: 'User Management',
+      addUser: 'Add New User',
+      editUser: 'Edit User',
+      email: 'Email',
+      role: 'Role',
+      status: 'Status',
+      active: 'Active',
+      inactive: 'Inactive',
+      save: 'Save User',
+      deleteConfirm: 'Are you sure you want to delete this user?',
+      noUsers: 'No users found.'
+    },
+    subscription: {
+      title: 'Subscription',
+      plan: 'Plan',
+      monthly: 'Monthly',
+      yearly: 'Yearly',
+      status: 'Status',
+      expiry: 'Expiry Date',
+      active: 'Active',
+      expired: 'Expired',
+      trial: 'Trial',
+      updatePlan: 'Update Plan',
+      manage: 'Manage Subscription'
     },
     pos: {
       searchPlaceholder: 'Search products...',
@@ -74,6 +101,7 @@ export const translations = {
     },
     dashboard: {
       title: 'Business Overview',
+      systemOverview: 'System Overview',
       totalSales: 'Total Sales',
       totalTransactions: 'Total Transactions',
       totalProducts: 'Total Products',
@@ -131,6 +159,17 @@ export const translations = {
       prescriptionRequired: 'Prescription Required',
       author: 'Author',
       isbn: 'ISBN',
+      backupSystem: 'Backup System',
+      backupDescription: 'Export all system data to a JSON file for safe keeping or import an existing backup.',
+      exportData: 'Export All Data',
+      importData: 'Import Data',
+      importSuccess: 'Data imported successfully! The application will now reload.',
+      importError: 'Failed to import data. Please ensure the file is a valid JSON backup.',
+      securityTitle: 'Risk & Security',
+      securityDescription: 'Monitor system security status and manage data access risks.',
+      dataEncryption: 'Data Encryption',
+      accessControl: 'Access Control',
+      viewAuditLogs: 'View Audit Logs',
       noTenants: 'No tenants found.'
     }
   },
@@ -156,7 +195,34 @@ export const translations = {
       dashboard: 'Dasbor',
       settings: 'Pengaturan',
       logout: 'Keluar',
-      language: 'Bahasa'
+      language: 'Bahasa',
+      users: 'Manajemen Pengguna'
+    },
+    users: {
+      title: 'Manajemen Pengguna',
+      addUser: 'Tambah Pengguna Baru',
+      editUser: 'Edit Pengguna',
+      email: 'Email',
+      role: 'Peran',
+      status: 'Status',
+      active: 'Aktif',
+      inactive: 'Tidak Aktif',
+      save: 'Simpan Pengguna',
+      deleteConfirm: 'Apakah Anda yakin ingin menghapus pengguna ini?',
+      noUsers: 'Pengguna tidak ditemukan.'
+    },
+    subscription: {
+      title: 'Langganan',
+      plan: 'Paket',
+      monthly: 'Bulanan',
+      yearly: 'Tahunan',
+      status: 'Status',
+      expiry: 'Tanggal Kedaluwarsa',
+      active: 'Aktif',
+      expired: 'Kedaluwarsa',
+      trial: 'Uji Coba',
+      updatePlan: 'Perbarui Paket',
+      manage: 'Kelola Langganan'
     },
     pos: {
       searchPlaceholder: 'Cari produk...',
@@ -207,6 +273,7 @@ export const translations = {
     },
     dashboard: {
       title: 'Ikhtisar Bisnis',
+      systemOverview: 'Ikhtisar Sistem',
       totalSales: 'Total Penjualan',
       totalTransactions: 'Total Transaksi',
       totalProducts: 'Total Produk',
@@ -264,6 +331,17 @@ export const translations = {
       prescriptionRequired: 'Perlu Resep Dokter',
       author: 'Penulis',
       isbn: 'ISBN',
+      backupSystem: 'Sistem Cadangan',
+      backupDescription: 'Ekspor semua data sistem ke file JSON untuk penyimpanan aman atau impor cadangan yang ada.',
+      exportData: 'Ekspor Semua Data',
+      importData: 'Impor Data',
+      importSuccess: 'Data berhasil diimpor! Aplikasi akan dimuat ulang.',
+      importError: 'Gagal mengimpor data. Pastikan file adalah cadangan JSON yang valid.',
+      securityTitle: 'Risiko & Keamanan',
+      securityDescription: 'Pantau status keamanan sistem dan kelola risiko akses data.',
+      dataEncryption: 'Enkripsi Data',
+      accessControl: 'Kontrol Akses',
+      viewAuditLogs: 'Lihat Log Audit',
       noTenants: 'Tenant tidak ditemukan.'
     }
   }

@@ -48,7 +48,8 @@ export const authService = {
           photoURL: firebaseUser.photoURL || '',
           role: 'staff',
           tenantId: firebaseUser.uid, // Default tenantId for Google login
-          createdAt: new Date() as any
+          createdAt: new Date() as any,
+          status: 'active'
         });
       } else {
         // If no firebase user, check local
@@ -74,14 +75,27 @@ export const authService = {
   loginLocal: async (username: string, password: string, tenantId: string): Promise<UserProfile> => {
     // Simple local auth for demo/offline mode
     // In a real app, this would call a backend
-    if (username === 'admin' && password === 'admin') {
+    if (username === 'superadmin' && password === 'superadmin') {
+      const user: UserProfile = {
+        uid: `local-system-superadmin`,
+        email: `superadmin@system.pos`,
+        displayName: 'System Owner',
+        role: 'superadmin',
+        tenantId: 'system',
+        createdAt: new Date() as any,
+        status: 'active'
+      };
+      saveLocalUser(user);
+      return user;
+    } else if (username === 'admin' && password === 'admin') {
       const user: UserProfile = {
         uid: `local-${tenantId}-admin`,
         email: `admin@${tenantId}.pos`,
-        displayName: 'Local Admin',
+        displayName: 'Tenant Admin',
         role: 'admin',
         tenantId: tenantId,
-        createdAt: new Date() as any
+        createdAt: new Date() as any,
+        status: 'active'
       };
       saveLocalUser(user);
       return user;
@@ -92,12 +106,13 @@ export const authService = {
         displayName: 'Local Staff',
         role: 'staff',
         tenantId: tenantId,
-        createdAt: new Date() as any
+        createdAt: new Date() as any,
+        status: 'active'
       };
       saveLocalUser(user);
       return user;
     } else {
-      throw new Error('Invalid credentials. Use admin/admin or staff/staff.');
+      throw new Error('Invalid credentials. Use superadmin/superadmin, admin/admin, or staff/staff.');
     }
   },
 

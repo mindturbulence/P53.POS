@@ -46,7 +46,11 @@ import {
   TrendingUp, 
   DollarSign, 
   Users,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Download,
+  Upload,
+  ShieldCheck,
+  Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import gsap from 'gsap';
@@ -220,7 +224,7 @@ export default function App() {
     const saved = localStorage.getItem('pos_lang');
     return (saved as Language) || 'en';
   });
-  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'history' | 'dashboard' | 'settings'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'history' | 'dashboard' | 'settings' | 'users'>('pos');
   
   const t = translations[lang];
 
@@ -231,15 +235,27 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<UserProfile[]>([]);
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showProductModal, setShowProductModal] = useState<{ show: boolean, product?: Product }>({ show: false });
+  const [showUserModal, setShowUserModal] = useState<{ show: boolean, user?: UserProfile }>({ show: false });
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris'>('cash');
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
 
   // --- Auth & Data Fetching ---
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'superadmin') {
+        setActiveTab('dashboard');
+      } else {
+        setActiveTab('pos');
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChange(async (user) => {
@@ -255,9 +271,10 @@ export default function App() {
             // Create new user profile in Firebase
             const newUser: UserProfile = {
               ...user,
-              role: 'staff',
+              role: 'admin', // Default to tenant admin for first user
               tenantId: user.tenantId || user.uid, // Ensure tenantId is present
               createdAt: Timestamp.now(),
+              status: 'active'
             };
             await dataService.saveUser(newUser);
             setUser(newUser);
@@ -278,22 +295,30 @@ export default function App() {
   useEffect(() => {
     if (!user || !user.tenantId) return;
 
-    const unsubscribeProducts = dataService.getProducts(user.tenantId, setProducts);
-    const unsubscribeTransactions = dataService.getTransactions(user.tenantId, setTransactions);
-    
-    // Fetch current tenant info
-    dataService.getTenant(user.tenantId).then(setCurrentTenant);
-
-    // If admin, fetch all tenants
+    let unsubscribeProducts = () => {};
+    let unsubscribeTransactions = () => {};
     let unsubscribeTenants = () => {};
-    if (user.role === 'admin') {
+    let unsubscribeUsers = () => {};
+
+    if (user.role === 'superadmin') {
+      unsubscribeProducts = dataService.getAllProducts(setProducts);
+      unsubscribeTransactions = dataService.getAllTransactions(setTransactions);
       unsubscribeTenants = dataService.getTenants(setTenants);
+    } else {
+      unsubscribeProducts = dataService.getProducts(user.tenantId, setProducts);
+      unsubscribeTransactions = dataService.getTransactions(user.tenantId, setTransactions);
+      dataService.getTenant(user.tenantId).then(setCurrentTenant);
+      
+      if (user.role === 'admin') {
+        unsubscribeUsers = dataService.getUsersByTenant(user.tenantId, setTenantUsers);
+      }
     }
 
     return () => {
       unsubscribeProducts();
       unsubscribeTransactions();
       unsubscribeTenants();
+      unsubscribeUsers();
     };
   }, [user]);
 
@@ -510,13 +535,15 @@ export default function App() {
             </div>
 
             <nav className="flex-1 space-y-2">
-              <button
-                onClick={() => { setActiveTab('pos'); setIsSidebarOpen(false); }}
-                className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'pos' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
-              >
-                <LayoutDashboard size={20} />
-                <span className="font-medium">{t.sidebar.pos}</span>
-              </button>
+              {user.role !== 'superadmin' && (
+                <button
+                  onClick={() => { setActiveTab('pos'); setIsSidebarOpen(false); }}
+                  className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'pos' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
+                >
+                  <LayoutDashboard size={20} />
+                  <span className="font-medium">{t.sidebar.pos}</span>
+                </button>
+              )}
               <button
                 onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}
                 className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'inventory' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
@@ -539,6 +566,15 @@ export default function App() {
                 <span className="font-medium">{t.sidebar.dashboard}</span>
               </button>
               {user.role === 'admin' && (
+                <button
+                  onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
+                  className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'users' ? 'bg-stone-900 text-white shadow-md' : 'text-stone-500 hover:bg-stone-100'}`}
+                >
+                  <Users size={20} />
+                  <span className="font-medium">{t.sidebar.users}</span>
+                </button>
+              )}
+              {user.role === 'superadmin' && (
                 <button
                   onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
                   className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-stone-900 text-white shadow-lg' : 'text-stone-500 hover:bg-stone-100'}`}
@@ -754,7 +790,7 @@ export default function App() {
                         <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">{t.common.offlineMode}</span>
                       )}
                     </div>
-                    {user.role === 'admin' && (
+                    {user.role === 'staff' && (
                       <button
                         onClick={() => setShowProductModal({ show: true })}
                         className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:bg-stone-800 transition-all"
@@ -806,7 +842,7 @@ export default function App() {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                {user.role === 'admin' && (
+                                {user.role === 'staff' && (
                                   <div className="flex items-center justify-end gap-2">
                                     <button
                                       onClick={() => setShowProductModal({ show: true, product })}
@@ -882,8 +918,10 @@ export default function App() {
                   className="space-y-8"
                 >
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">{t.dashboard.title}</h2>
-                    {user.role === 'admin' && products.length === 0 && (
+                    <h2 className="text-2xl font-bold">
+                      {user.role === 'admin' ? t.dashboard.systemOverview : t.dashboard.title}
+                    </h2>
+                    {user.role === 'staff' && products.length === 0 && (
                       <button
                         onClick={async () => {
                           const initialProducts = [
@@ -904,6 +942,20 @@ export default function App() {
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {user.role === 'admin' && (
+                      <div className="stat-card bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                            <Users size={24} />
+                          </div>
+                          <span className="text-stone-500 font-medium">{t.settings.tenants}</span>
+                        </div>
+                        <p className="text-3xl font-black">{tenants.length}</p>
+                        <div className="mt-4 flex items-center gap-2 text-blue-600 text-sm font-bold">
+                          <span>{t.dashboard.acrossBranches}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="stat-card bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
                       <div className="flex items-center gap-4 mb-4">
                         <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
@@ -967,7 +1019,7 @@ export default function App() {
                   </div>
                 </motion.div>
               )}
-              {activeTab === 'settings' && user.role === 'admin' && (
+              {activeTab === 'settings' && user.role === 'superadmin' && (
                 <motion.div
                   key="settings"
                   initial={{ opacity: 0, y: 10 }}
@@ -989,7 +1041,16 @@ export default function App() {
                           const name = formData.get('name') as string;
                           const type = formData.get('type') as TenantType;
                           if (name && type) {
-                            await dataService.addTenant({ name, type, createdAt: Timestamp.now() });
+                            await dataService.addTenant({ 
+                              name, 
+                              type, 
+                              createdAt: Timestamp.now(),
+                              subscription: {
+                                plan: 'monthly',
+                                status: 'trial',
+                                expiryDate: Timestamp.fromDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) // 14 days trial
+                              }
+                            });
                             e.currentTarget.reset();
                           }
                         }} className="space-y-4">
@@ -1031,7 +1092,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 space-y-8">
                       <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
                         <div className="p-6 border-b border-stone-100">
                           <h3 className="text-lg font-bold">{t.settings.tenants}</h3>
@@ -1041,8 +1102,8 @@ export default function App() {
                             <thead className="bg-stone-50 border-b border-stone-200">
                               <tr>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.settings.tenantName}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.settings.tenantType}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">ID</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.subscription.title}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.common.actions}</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-100">
@@ -1055,13 +1116,46 @@ export default function App() {
                               ) : (
                                 tenants.map(tenant => (
                                   <tr key={tenant.id} className="hover:bg-stone-50 transition-colors">
-                                    <td className="px-6 py-4 font-medium">{tenant.name}</td>
                                     <td className="px-6 py-4">
-                                      <span className="px-2 py-1 bg-stone-100 rounded-md text-xs font-bold uppercase tracking-wider">
-                                        {t.settings[tenant.type as keyof typeof t.settings] || tenant.type}
-                                      </span>
+                                      <p className="font-medium">{tenant.name}</p>
+                                      <p className="text-xs text-stone-400 font-mono">{tenant.id}</p>
                                     </td>
-                                    <td className="px-6 py-4 text-xs font-mono text-stone-400">{tenant.id}</td>
+                                    <td className="px-6 py-4">
+                                      <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                            tenant.subscription?.status === 'active' ? 'bg-green-100 text-green-700' : 
+                                            tenant.subscription?.status === 'trial' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                          }`}>
+                                            {tenant.subscription?.status || 'N/A'}
+                                          </span>
+                                          <span className="text-xs text-stone-500">{tenant.subscription?.plan}</span>
+                                        </div>
+                                        <p className="text-[10px] text-stone-400">
+                                          {t.subscription.expiry}: {tenant.subscription?.expiryDate?.toDate().toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <div className="flex items-center gap-2">
+                                        <button 
+                                          onClick={async () => {
+                                            const newPlan = tenant.subscription?.plan === 'monthly' ? 'yearly' : 'monthly';
+                                            const newExpiry = new Date();
+                                            newExpiry.setMonth(newExpiry.getMonth() + (newPlan === 'monthly' ? 1 : 12));
+                                            
+                                            await dataService.updateTenantSubscription(tenant.id, {
+                                              plan: newPlan,
+                                              status: 'active',
+                                              expiryDate: Timestamp.fromDate(newExpiry)
+                                            });
+                                          }}
+                                          className="text-xs bg-stone-100 text-stone-600 px-3 py-1 rounded-full hover:bg-stone-200"
+                                        >
+                                          {t.subscription.updatePlan}
+                                        </button>
+                                      </div>
+                                    </td>
                                   </tr>
                                 ))
                               )}
@@ -1069,6 +1163,174 @@ export default function App() {
                           </table>
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Backup System */}
+                        <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                          <div className="flex items-center gap-3 mb-6">
+                            <Database className="text-stone-900" size={24} />
+                            <h3 className="text-lg font-bold">{t.settings.backupSystem}</h3>
+                          </div>
+                          <p className="text-sm text-stone-500 mb-6">{t.settings.backupDescription}</p>
+                          <div className="flex flex-col gap-3">
+                            <button
+                              onClick={async () => {
+                                const data = await dataService.exportData();
+                                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `p53_pos_backup_${new Date().toISOString().split('T')[0]}.json`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-stone-100 text-stone-900 rounded-xl font-medium hover:bg-stone-200 transition-all"
+                            >
+                              <Download size={18} />
+                              {t.settings.exportData}
+                            </button>
+                            <label className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-all cursor-pointer">
+                              <Upload size={18} />
+                              {t.settings.importData}
+                              <input
+                                type="file"
+                                accept=".json"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = async (event) => {
+                                      try {
+                                        const data = JSON.parse(event.target?.result as string);
+                                        await dataService.importData(data);
+                                        alert(t.settings.importSuccess);
+                                        window.location.reload();
+                                      } catch (err) {
+                                        alert(t.settings.importError);
+                                      }
+                                    };
+                                    reader.readAsText(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Security & Risk Management */}
+                        <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                          <div className="flex items-center gap-3 mb-6">
+                            <ShieldCheck className="text-stone-900" size={24} />
+                            <h3 className="text-lg font-bold">{t.settings.securityTitle}</h3>
+                          </div>
+                          <p className="text-sm text-stone-500 mb-6">{t.settings.securityDescription}</p>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl">
+                              <span className="text-sm font-medium">{t.settings.dataEncryption}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">Active</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl">
+                              <span className="text-sm font-medium">{t.settings.accessControl}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">RBAC Enabled</span>
+                            </div>
+                            <button className="w-full py-2 text-stone-500 text-xs font-medium hover:text-stone-900 transition-colors">
+                              {t.settings.viewAuditLogs}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'users' && user.role === 'admin' && (
+                <motion.div
+                  key="users"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-8"
+                >
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">{t.users.title}</h2>
+                    <button
+                      onClick={() => setShowUserModal({ show: true })}
+                      className="bg-stone-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-800 transition-all shadow-lg shadow-stone-200"
+                    >
+                      <Plus size={20} />
+                      {t.users.addUser}
+                    </button>
+                  </div>
+
+                  <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="bg-stone-50 border-b border-stone-200">
+                          <tr>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.users.email}</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.users.role}</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400">{t.users.status}</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-stone-400 text-right">{t.common.actions}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {tenantUsers.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="px-6 py-12 text-center text-stone-400">
+                                {t.users.noUsers}
+                              </td>
+                            </tr>
+                          ) : (
+                            tenantUsers.map(u => (
+                              <tr key={u.uid} className="hover:bg-stone-50 transition-colors">
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center text-stone-400">
+                                      <UserIcon size={16} />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium">{u.displayName || 'Unnamed User'}</p>
+                                      <p className="text-xs text-stone-400">{u.email}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2 py-1 bg-stone-100 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                                    {u.role}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {u.status === 'active' ? t.users.active : t.users.inactive}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => setShowUserModal({ show: true, user: u })}
+                                      className="p-2 text-stone-400 hover:text-stone-900 transition-colors"
+                                    >
+                                      <Edit2 size={18} />
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(t.users.deleteConfirm)) {
+                                          await dataService.deleteUser(u.uid);
+                                        }
+                                      }}
+                                      className="p-2 text-stone-400 hover:text-red-600 transition-colors"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </motion.div>
@@ -1079,7 +1341,117 @@ export default function App() {
 
         {/* Modals */}
 
-        {/* Product Modal */}
+        {/* User Modal */}
+        <AnimatePresence>
+          {showUserModal.show && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowUserModal({ show: false })}
+                className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+              >
+                <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+                  <h3 className="text-xl font-bold">{showUserModal.user ? t.users.editUser : t.users.addUser}</h3>
+                  <button onClick={() => setShowUserModal({ show: false })} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const email = formData.get('email') as string;
+                  const displayName = formData.get('displayName') as string;
+                  const role = formData.get('role') as 'admin' | 'staff';
+                  const status = formData.get('status') as 'active' | 'inactive';
+
+                  if (email && role && user) {
+                    const userData: UserProfile = {
+                      uid: showUserModal.user?.uid || `user-${Date.now()}`,
+                      email,
+                      displayName,
+                      role,
+                      status,
+                      tenantId: user.tenantId,
+                      createdAt: showUserModal.user?.createdAt || Timestamp.now()
+                    };
+                    await dataService.saveUser(userData);
+                    setShowUserModal({ show: false });
+                  }
+                }} className="p-8 space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.users.email}</label>
+                      <input
+                        name="email"
+                        type="email"
+                        required
+                        defaultValue={showUserModal.user?.email}
+                        className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                        placeholder="staff@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Display Name</label>
+                      <input
+                        name="displayName"
+                        defaultValue={showUserModal.user?.displayName}
+                        className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.users.role}</label>
+                        <select
+                          name="role"
+                          defaultValue={showUserModal.user?.role || 'staff'}
+                          className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                        >
+                          <option value="staff">{t.common.staff}</option>
+                          <option value="admin">{t.common.admin}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{t.users.status}</label>
+                        <select
+                          name="status"
+                          defaultValue={showUserModal.user?.status || 'active'}
+                          className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                        >
+                          <option value="active">{t.users.active}</option>
+                          <option value="inactive">{t.users.inactive}</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowUserModal({ show: false })}
+                      className="flex-1 px-6 py-3 border border-stone-200 rounded-2xl font-bold hover:bg-stone-50 transition-all"
+                    >
+                      {t.common.cancel}
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-6 py-3 bg-stone-900 text-white rounded-2xl font-bold hover:bg-stone-800 transition-all shadow-lg shadow-stone-200"
+                    >
+                      {t.users.save}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
         <AnimatePresence>
           {showProductModal.show && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

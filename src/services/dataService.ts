@@ -65,6 +65,20 @@ export const dataService = {
     }
   },
 
+  getAllProducts: (callback: (products: Product[]) => void) => {
+    if (useFirebase) {
+      const q = query(collection(db, 'products'), orderBy('name'));
+      return onSnapshot(q, (snapshot) => {
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        callback(products);
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'products'));
+    } else {
+      const products = getLocal<Product>(STORAGE_KEYS.PRODUCTS);
+      callback(products);
+      return () => {};
+    }
+  },
+
   addProduct: async (product: Omit<Product, 'id'>) => {
     if (useFirebase) {
       try {
@@ -125,6 +139,20 @@ export const dataService = {
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'transactions'));
     } else {
       const transactions = getLocal<Transaction>(STORAGE_KEYS.TRANSACTIONS).filter(t => t.tenantId === tenantId);
+      callback(transactions.sort((a, b) => (b.createdAt as any) - (a.createdAt as any)));
+      return () => {};
+    }
+  },
+
+  getAllTransactions: (callback: (transactions: Transaction[]) => void) => {
+    if (useFirebase) {
+      const q = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(100));
+      return onSnapshot(q, (snapshot) => {
+        const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        callback(transactions);
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'transactions'));
+    } else {
+      const transactions = getLocal<Transaction>(STORAGE_KEYS.TRANSACTIONS);
       callback(transactions.sort((a, b) => (b.createdAt as any) - (a.createdAt as any)));
       return () => {};
     }
@@ -197,6 +225,33 @@ export const dataService = {
     }
   },
 
+  getUsersByTenant: (tenantId: string, callback: (users: UserProfile[]) => void) => {
+    if (useFirebase) {
+      const q = query(collection(db, 'users'), where('tenantId', '==', tenantId), orderBy('createdAt', 'desc'));
+      return onSnapshot(q, (snapshot) => {
+        const users = snapshot.docs.map(doc => ({ ...doc.data() } as UserProfile));
+        callback(users);
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+    } else {
+      const users = getLocal<UserProfile>(STORAGE_KEYS.USERS).filter(u => u.tenantId === tenantId);
+      callback(users);
+      return () => {};
+    }
+  },
+
+  deleteUser: async (uid: string) => {
+    if (useFirebase) {
+      try {
+        await deleteDoc(doc(db, 'users', uid));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, 'users');
+      }
+    } else {
+      const users = getLocal<UserProfile>(STORAGE_KEYS.USERS);
+      saveLocal(STORAGE_KEYS.USERS, users.filter(u => u.uid !== uid));
+    }
+  },
+
   // Tenants
   getTenants: (callback: (tenants: Tenant[]) => void) => {
     if (useFirebase) {
@@ -209,6 +264,21 @@ export const dataService = {
       const tenants = getLocal<Tenant>(STORAGE_KEYS.TENANTS);
       callback(tenants);
       return () => {};
+    }
+  },
+
+  updateTenantSubscription: async (tenantId: string, subscription: Tenant['subscription']) => {
+    if (useFirebase) {
+      try {
+        const docRef = doc(db, 'tenants', tenantId);
+        await updateDoc(docRef, { subscription });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, 'tenants');
+      }
+    } else {
+      const tenants = getLocal<Tenant>(STORAGE_KEYS.TENANTS);
+      const updated = tenants.map(t => t.id === tenantId ? { ...t, subscription } : t);
+      saveLocal(STORAGE_KEYS.TENANTS, updated);
     }
   },
 
@@ -244,6 +314,43 @@ export const dataService = {
     } else {
       const tenants = getLocal<Tenant>(STORAGE_KEYS.TENANTS);
       return tenants.find(t => t.id === id) || null;
+    }
+  },
+
+  // System Management
+  exportData: async () => {
+    if (useFirebase) {
+      const collections = ['products', 'transactions', 'tenants', 'users'];
+      const data: Record<string, any> = {};
+      
+      for (const colName of collections) {
+        const snapshot = await getDocs(collection(db, colName));
+        data[colName] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+      return data;
+    } else {
+      return {
+        products: getLocal(STORAGE_KEYS.PRODUCTS),
+        transactions: getLocal(STORAGE_KEYS.TRANSACTIONS),
+        tenants: getLocal(STORAGE_KEYS.TENANTS),
+        users: getLocal(STORAGE_KEYS.USERS)
+      };
+    }
+  },
+
+  importData: async (data: Record<string, any[]>) => {
+    if (useFirebase) {
+      for (const [colName, docs] of Object.entries(data)) {
+        for (const docData of docs) {
+          const { id, ...rest } = docData;
+          await setDoc(doc(db, colName, id), rest);
+        }
+      }
+    } else {
+      if (data.products) saveLocal(STORAGE_KEYS.PRODUCTS, data.products);
+      if (data.transactions) saveLocal(STORAGE_KEYS.TRANSACTIONS, data.transactions);
+      if (data.tenants) saveLocal(STORAGE_KEYS.TENANTS, data.tenants);
+      if (data.users) saveLocal(STORAGE_KEYS.USERS, data.users);
     }
   }
 };

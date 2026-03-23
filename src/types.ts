@@ -5,9 +5,10 @@ export interface UserProfile {
   email: string;
   displayName?: string;
   photoURL?: string;
-  role: 'admin' | 'staff';
+  role: 'superadmin' | 'admin' | 'staff';
   tenantId: string;
   createdAt: Timestamp;
+  status: 'active' | 'inactive';
 }
 
 export type TenantType = 'fnb' | 'clothing' | 'general' | 'service' | 'grocery' | 'electronics' | 'pharmacy' | 'bookstore';
@@ -17,6 +18,11 @@ export interface Tenant {
   name: string;
   type: TenantType;
   createdAt: Timestamp;
+  subscription: {
+    plan: 'monthly' | 'yearly';
+    status: 'active' | 'expired' | 'trial';
+    expiryDate: Timestamp;
+  };
 }
 
 export interface Product {
