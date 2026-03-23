@@ -238,6 +238,7 @@ export default function App() {
   const [tenantUsers, setTenantUsers] = useState<UserProfile[]>([]);
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showProductModal, setShowProductModal] = useState<{ show: boolean, product?: Product }>({ show: false });
   const [showUserModal, setShowUserModal] = useState<{ show: boolean, user?: UserProfile }>({ show: false });
@@ -323,10 +324,18 @@ export default function App() {
   }, [user]);
 
   // --- POS Logic ---
+  const categories = useMemo(() => {
+    const cats = new Set(products.map(p => p.category || (lang === 'id' ? 'Tanpa Kategori' : 'Uncategorized')));
+    return ['All', ...Array.from(cats)];
+  }, [products, lang]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [products, searchQuery]);
+    return products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'All' || (p.category || (lang === 'id' ? 'Tanpa Kategori' : 'Uncategorized')) === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, selectedCategory, lang]);
 
   const addToCart = (product: Product) => {
     if (product.stock <= 0) return;
@@ -647,63 +656,92 @@ export default function App() {
                 >
                   {/* Product Grid */}
                   <div className="flex-1 flex flex-col gap-6">
-                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-bold">{t.sidebar.pos}</h2>
-                        {!useFirebase && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">{t.common.offlineMode}</span>
-                        )}
+                      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <h2 className="text-2xl font-bold">{t.sidebar.pos}</h2>
+                          {!useFirebase && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">{t.common.offlineMode}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                          <div className="relative flex-1 sm:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
+                            <input
+                              type="text"
+                              placeholder={t.pos.searchPlaceholder}
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10 transition-all"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
-                        <input
-                          type="text"
-                          placeholder={t.pos.searchPlaceholder}
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10 transition-all"
-                        />
+
+                      {/* Category Tabs */}
+                      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                        {categories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`
+                              px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all
+                              ${selectedCategory === cat 
+                                ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' 
+                                : 'bg-white text-stone-500 border border-stone-200 hover:border-stone-400'}
+                            `}
+                          >
+                            {cat === 'All' ? (lang === 'id' ? 'Semua' : 'All') : cat}
+                          </button>
+                        ))}
                       </div>
-                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 product-grid">
                       {filteredProducts.map((product, index) => (
-                        <motion.button
-                          key={product.id}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => addToCart(product)}
-                          disabled={product.stock <= 0}
-                          className={`
-                            product-card group relative bg-white border border-stone-200 rounded-2xl p-3 text-left transition-all hover:shadow-lg hover:border-stone-300
-                            ${product.stock <= 0 ? 'opacity-50 grayscale cursor-not-allowed' : ''}
-                          `}
-                        >
-                          <div className="aspect-square rounded-xl overflow-hidden mb-3 bg-stone-100">
-                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
-                          </div>
-                          <h3 className="font-semibold text-stone-900 truncate">{product.name}</h3>
-                          <p className="text-sm text-stone-500 mb-2">{product.category || (lang === 'id' ? 'Tanpa Kategori' : 'Uncategorized')}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-stone-900">{formatCurrency(product.price)}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${product.stock < 10 ? 'bg-red-100 text-red-600' : 'bg-stone-100 text-stone-600'}`}>
-                              {t.inventory.stock}: {product.stock}
-                            </span>
-                          </div>
-                          {product.attributes && Object.values(product.attributes).some(v => !!v) && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {Object.entries(product.attributes).map(([key, val]) => val && (
-                                <span key={key} className="text-[8px] bg-stone-50 text-stone-400 px-1.5 py-0.5 rounded border border-stone-100 uppercase tracking-tighter">
-                                  {t.settings[key as keyof typeof t.settings] || key}: {val}
-                                </span>
-                              ))}
+                          <motion.button
+                            key={product.id}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => addToCart(product)}
+                            disabled={product.stock <= 0}
+                            className={`
+                              product-card group relative bg-white border border-stone-200 rounded-3xl p-4 text-left transition-all hover:shadow-2xl hover:border-stone-300
+                              ${product.stock <= 0 ? 'opacity-50 grayscale cursor-not-allowed' : ''}
+                            `}
+                          >
+                            <div className="aspect-square rounded-2xl overflow-hidden mb-4 bg-stone-100 relative">
+                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" referrerPolicy="no-referrer" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+                              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                                <div className="w-10 h-10 bg-stone-900 text-white rounded-xl flex items-center justify-center shadow-xl">
+                                  <Plus size={20} />
+                                </div>
+                              </div>
                             </div>
-                          )}
-                          {product.stock <= 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-2xl">
-                              <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{t.pos.soldOut}</span>
+                            <div className="space-y-1">
+                              <h3 className="font-bold text-stone-900 truncate text-lg leading-tight">{product.name}</h3>
+                              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">{product.category || (lang === 'id' ? 'Tanpa Kategori' : 'Uncategorized')}</p>
                             </div>
-                          )}
-                        </motion.button>
+                            <div className="flex items-center justify-between mt-4">
+                              <span className="font-black text-xl text-stone-900">{formatCurrency(product.price)}</span>
+                              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${product.stock < 10 ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500'}`}>
+                                <Package size={12} />
+                                <span className="text-[10px] font-black">{product.stock}</span>
+                              </div>
+                            </div>
+                            {product.attributes && Object.values(product.attributes).some(v => !!v) && (
+                              <div className="mt-3 flex flex-wrap gap-1">
+                                {Object.entries(product.attributes).map(([key, val]) => val && (
+                                  <span key={key} className="text-[9px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-tighter">
+                                    {val}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {product.stock <= 0 && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-3xl z-10">
+                                <span className="bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg">{t.pos.soldOut}</span>
+                              </div>
+                            )}
+                          </motion.button>
                       ))}
                     </div>
                   </div>
@@ -719,9 +757,21 @@ export default function App() {
 
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                       {cart.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-stone-400 text-center">
-                          <ShoppingCart size={48} className="mb-4 opacity-20" />
-                          <p>{t.pos.emptyCart}</p>
+                        <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                          <div className="w-32 h-32 bg-stone-50 rounded-full flex items-center justify-center mb-6 relative">
+                            <ShoppingCart size={48} className="text-stone-200" />
+                            <motion.div 
+                              animate={{ y: [0, -10, 0] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                              className="absolute -top-2 -right-2 w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center"
+                            >
+                              <Plus size={20} className="text-stone-400" />
+                            </motion.div>
+                          </div>
+                          <h4 className="text-lg font-bold text-stone-900 mb-2">{t.pos.emptyCart}</h4>
+                          <p className="text-sm text-stone-400 leading-relaxed">
+                            {lang === 'id' ? 'Mulai tambahkan produk ke keranjang untuk membuat pesanan baru.' : 'Start adding products to the cart to create a new order.'}
+                          </p>
                         </div>
                       ) : (
                         cart.map(item => (
@@ -941,80 +991,110 @@ export default function App() {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {user.role === 'admin' && (
-                      <div className="stat-card bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                            <Users size={24} />
+                      <div className="stat-card bg-white p-8 rounded-[2rem] border border-stone-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                            <Users size={28} />
                           </div>
-                          <span className="text-stone-500 font-medium">{t.settings.tenants}</span>
+                          <span className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t.settings.tenants}</span>
+                          <p className="text-5xl font-black mt-2 tracking-tighter">{tenants.length}</p>
                         </div>
-                        <p className="text-3xl font-black">{tenants.length}</p>
-                        <div className="mt-4 flex items-center gap-2 text-blue-600 text-sm font-bold">
+                        <div className="mt-8 flex items-center gap-2 text-blue-600 text-sm font-bold">
                           <span>{t.dashboard.acrossBranches}</span>
                         </div>
                       </div>
                     )}
-                    <div className="stat-card bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
-                          <DollarSign size={24} />
+                    
+                    <div className="md:col-span-2 lg:col-span-2 stat-card bg-stone-900 p-8 rounded-[2rem] text-white shadow-2xl shadow-stone-200 flex flex-col justify-between relative overflow-hidden">
+                      <div className="relative z-10">
+                        <div className="w-14 h-14 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-6">
+                          <DollarSign size={28} />
                         </div>
-                        <span className="text-stone-500 font-medium">{t.dashboard.totalRevenue}</span>
+                        <span className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t.dashboard.totalRevenue}</span>
+                        <p className="text-5xl font-black mt-2 tracking-tighter">{formatCurrency(transactions.reduce((sum, tx) => sum + tx.totalAmount, 0))}</p>
                       </div>
-                      <p className="text-3xl font-black">{formatCurrency(transactions.reduce((sum, tx) => sum + tx.totalAmount, 0))}</p>
-                      <div className="mt-4 flex items-center gap-2 text-green-600 text-sm font-bold">
+                      <div className="mt-8 flex items-center gap-2 text-emerald-400 text-sm font-bold relative z-10">
                         <TrendingUp size={16} />
                         <span>+12.5% {t.dashboard.fromLastMonth}</span>
                       </div>
+                      {/* Abstract Background Element */}
+                      <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
                     </div>
 
-                    <div className="stat-card bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-stone-900 text-white rounded-2xl flex items-center justify-center">
-                          <ShoppingCart size={24} />
+                    <div className="stat-card bg-white p-8 rounded-[2rem] border border-stone-200 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="w-14 h-14 bg-stone-100 text-stone-900 rounded-2xl flex items-center justify-center mb-6">
+                          <ShoppingCart size={28} />
                         </div>
-                        <span className="text-stone-500 font-medium">{t.dashboard.totalSales}</span>
+                        <span className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t.dashboard.totalSales}</span>
+                        <p className="text-5xl font-black mt-2 tracking-tighter">{transactions.length}</p>
                       </div>
-                      <p className="text-3xl font-black">{transactions.length}</p>
-                      <div className="mt-4 flex items-center gap-2 text-stone-400 text-sm font-bold">
+                      <div className="mt-8 flex items-center gap-2 text-stone-400 text-sm font-bold">
                         <span>{t.dashboard.acrossBranches}</span>
                       </div>
                     </div>
 
-                    <div className="stat-card bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                          <Users size={24} />
+                    {/* Top Products Bento Card */}
+                    <div className="md:col-span-2 lg:col-span-2 stat-card bg-white p-8 rounded-[2rem] border border-stone-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-8">
+                        <div>
+                          <h3 className="text-xl font-black">{t.dashboard.topProducts}</h3>
+                          <p className="text-stone-400 text-sm font-medium">{lang === 'id' ? 'Produk paling populer' : 'Most popular products'}</p>
                         </div>
-                        <span className="text-stone-500 font-medium">{t.dashboard.topProducts}</span>
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                          <Package size={24} />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        {products.slice(0, 3).map(p => (
-                          <div key={p.id} className="flex justify-between items-center text-sm">
-                            <span className="text-stone-600 font-medium">{p.name}</span>
-                            <span className="font-bold">{p.stock} {t.dashboard.inStock}</span>
+                      <div className="space-y-4">
+                        {products.slice(0, 4).map((p, i) => (
+                          <div key={p.id} className="group">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-stone-600 font-bold">{p.name}</span>
+                              <span className="font-black text-stone-900">{p.stock} <span className="text-stone-400 text-[10px] uppercase">{t.dashboard.inStock}</span></span>
+                            </div>
+                            <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(100, (p.stock / 200) * 100)}%` }}
+                                transition={{ duration: 1, delay: i * 0.1 }}
+                                className="h-full bg-stone-900 rounded-full"
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm">
-                    <h3 className="text-xl font-bold mb-6">{t.dashboard.recentActivity}</h3>
-                    <div className="space-y-6">
-                      {transactions.slice(0, 5).map(tx => (
-                        <div key={tx.id} className="flex items-center gap-4">
-                          <div className="w-2 h-2 rounded-full bg-stone-900" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">
-                              {t.dashboard.newOrderOf} <span className="font-bold">{formatCurrency(tx.totalAmount)}</span> {t.dashboard.completed}
-                            </p>
-                            <p className="text-xs text-stone-400">{tx.createdAt.toDate().toLocaleString()}</p>
-                          </div>
+                    {/* Recent Activity Bento Card */}
+                    <div className="md:col-span-1 lg:col-span-2 stat-card bg-white p-8 rounded-[2rem] border border-stone-200 shadow-sm flex flex-col">
+                      <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-xl font-black">{t.dashboard.recentActivity}</h3>
+                        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
+                          <History size={24} />
                         </div>
-                      ))}
+                      </div>
+                      <div className="space-y-6 flex-1">
+                        {transactions.slice(0, 4).map((tx, i) => (
+                          <div key={tx.id} className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${i === 0 ? 'bg-stone-900 text-white' : 'bg-stone-50 text-stone-400'}`}>
+                              <ChevronRight size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-stone-900 truncate">
+                                {t.dashboard.newOrderOf} {formatCurrency(tx.totalAmount)}
+                              </p>
+                              <p className="text-xs text-stone-400 font-medium">{tx.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
+                                {t.dashboard.completed}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1734,48 +1814,65 @@ export default function App() {
                 <div className="p-8 space-y-8">
                   {checkoutStatus === 'idle' && (
                     <>
-                      <div className="text-center">
-                        <p className="text-stone-400 font-bold uppercase tracking-widest text-xs mb-2">{t.pos.total}</p>
-                        <p className="text-4xl font-black text-stone-900">{formatCurrency(cartTotal)}</p>
+                      <div className="bg-stone-50 p-8 rounded-[2rem] text-center border border-stone-100">
+                        <p className="text-stone-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-3">{t.pos.total}</p>
+                        <p className="text-5xl font-black text-stone-900 tracking-tighter">{formatCurrency(cartTotal)}</p>
                       </div>
 
-                      <div className="space-y-4">
-                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">{t.checkout.paymentMethod}</p>
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-black text-stone-400 uppercase tracking-widest">{t.checkout.paymentMethod}</p>
+                          <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded-md font-bold uppercase">{cart.length} {lang === 'id' ? 'Item' : 'Items'}</span>
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <button
                             onClick={() => setPaymentMethod('cash')}
-                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'cash' ? 'border-stone-900 bg-stone-50' : 'border-stone-100 hover:border-stone-200'}`}
+                            className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'cash' ? 'border-stone-900 bg-stone-50 shadow-xl shadow-stone-100' : 'border-stone-100 hover:border-stone-200 bg-white'}`}
                           >
-                            <Banknote size={32} className={paymentMethod === 'cash' ? 'text-stone-900' : 'text-stone-300'} />
-                            <span className="font-bold">{t.checkout.cash}</span>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400'}`}>
+                              <Banknote size={24} />
+                            </div>
+                            <span className="font-bold text-sm">{t.checkout.cash}</span>
                           </button>
                           <button
                             onClick={() => setPaymentMethod('qris')}
-                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'qris' ? 'border-stone-900 bg-stone-50' : 'border-stone-100 hover:border-stone-200'}`}
+                            className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'qris' ? 'border-stone-900 bg-stone-50 shadow-xl shadow-stone-100' : 'border-stone-100 hover:border-stone-200 bg-white'}`}
                           >
-                            <CreditCard size={32} className={paymentMethod === 'qris' ? 'text-stone-900' : 'text-stone-300'} />
-                            <span className="font-bold">{t.checkout.qris}</span>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${paymentMethod === 'qris' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400'}`}>
+                              <CreditCard size={24} />
+                            </div>
+                            <span className="font-bold text-sm">{t.checkout.qris}</span>
                           </button>
                         </div>
                       </div>
 
                       {paymentMethod === 'qris' && (
-                        <div className="bg-stone-50 p-6 rounded-2xl border border-stone-200 flex flex-col items-center">
-                          <div className="w-48 h-48 bg-white p-4 rounded-xl shadow-inner mb-4 flex items-center justify-center border border-stone-100">
-                             {/* Mock QR Code */}
-                             <div className="grid grid-cols-4 gap-1 opacity-80">
-                               {[...Array(16)].map((_, i) => (
-                                 <div key={i} className={`w-8 h-8 ${Math.random() > 0.5 ? 'bg-stone-900' : 'bg-transparent'}`} />
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-white p-8 rounded-[2rem] border-2 border-stone-100 flex flex-col items-center shadow-inner"
+                        >
+                          <div className="w-56 h-56 bg-white p-6 rounded-3xl shadow-2xl mb-6 flex items-center justify-center border border-stone-50 relative overflow-hidden">
+                             {/* Mock QR Code with more detail */}
+                             <div className="grid grid-cols-8 gap-1 opacity-90 relative z-10">
+                               {[...Array(64)].map((_, i) => (
+                                 <div key={i} className={`w-4 h-4 rounded-sm ${Math.random() > 0.4 ? 'bg-stone-900' : 'bg-transparent'}`} />
                                ))}
                              </div>
+                             <div className="absolute inset-0 bg-stone-50/50 backdrop-blur-[1px]" />
+                             <div className="absolute inset-0 flex items-center justify-center z-20">
+                               <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center border border-stone-100">
+                                 <CreditCard size={24} className="text-stone-900" />
+                               </div>
+                             </div>
                           </div>
-                          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">{t.checkout.scanToPay}</p>
-                        </div>
+                          <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.3em]">{t.checkout.scanToPay}</p>
+                        </motion.div>
                       )}
 
                       <button
                         onClick={handleCheckout}
-                        className="w-full bg-stone-900 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-stone-800 transition-all"
+                        className="w-full bg-stone-900 text-white py-5 rounded-[2rem] font-black text-xl shadow-2xl shadow-stone-200 hover:bg-stone-800 hover:scale-[1.02] active:scale-[0.98] transition-all"
                       >
                         {t.checkout.confirmPayment}
                       </button>
