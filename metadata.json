@@ -1,0 +1,5 @@
+{
+  "name": "P53. POS - Point of Sale",
+  "description": "A comprehensive, simple, and lightweight Point of Sale (POS) application with multi-product management, sales reporting, and QRIS payment integration.",
+  "requestFramePermissions": []
+}

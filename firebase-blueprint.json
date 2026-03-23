@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user profile information and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "User's email address." },
+        "displayName": { "type": "string", "description": "User's display name." },
+        "photoURL": { "type": "string", "format": "uri", "description": "User's profile photo URL." },
+        "role": { "type": "string", "enum": ["admin", "staff"], "description": "User's role in the system." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the user was created." }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Represents a product in the inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique product ID." },
+        "name": { "type": "string", "description": "Name of the product." },
+        "price": { "type": "number", "description": "Unit price of the product." },
+        "stock": { "type": "integer", "description": "Current stock level." },
+        "category": { "type": "string", "description": "Product category." },
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL to the product image." },
+        "createdBy": { "type": "string", "description": "UID of the user who created the product." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last update." }
+      },
+      "required": ["name", "price", "stock", "createdBy", "updatedAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Represents a sales transaction.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique transaction ID." },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "integer" },
+              "price": { "type": "number" },
+              "subtotal": { "type": "number" }
+            }
+          }
+        },
+        "totalAmount": { "type": "number", "description": "Total amount of the transaction." },
+        "paymentMethod": { "type": "string", "enum": ["cash", "qris"], "description": "Method of payment." },
+        "status": { "type": "string", "enum": ["completed", "pending", "cancelled"], "description": "Status of the transaction." },
+        "createdBy": { "type": "string", "description": "UID of the user who performed the transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of the transaction." }
+      },
+      "required": ["items", "totalAmount", "paymentMethod", "status", "createdBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents."
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Inventory products."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Sales transactions."
+    }
+  }
+}
